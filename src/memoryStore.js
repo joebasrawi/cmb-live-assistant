@@ -33,11 +33,17 @@ const STOPWORDS = new Set([
 ]);
 
 export function tokenize(value) {
-  return String(value || "")
+  const tokens = String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .split(/\s+/)
     .filter((token) => token.length > 2 && !STOPWORDS.has(token));
+  const expanded = new Set(tokens);
+  for (const token of tokens) {
+    if (token.endsWith("s") && token.length > 4) expanded.add(token.slice(0, -1));
+    if (token === "commissioners") expanded.add("commissioner");
+  }
+  return [...expanded];
 }
 
 function queryDates(value) {
@@ -81,6 +87,12 @@ function queryDates(value) {
   return dates;
 }
 
+function queryRecordNumbers(value) {
+  return String(value || "")
+    .toLowerCase()
+    .match(/\b(?:ltc\s*)?\d{2,4}[-/]\d{2,5}\b/g) || [];
+}
+
 function scoreDocument(document, queryTokens) {
   const haystack = `${document.title || ""} ${document.kind || ""} ${document.text || ""}`.toLowerCase();
   let score = 0;
@@ -119,6 +131,33 @@ function scoreRecord(record, queryTokens, dateMatches = new Set()) {
   }
   if (dateMatches.has(String(record.meetingDate || ""))) score += 20;
 
+  return score;
+}
+
+function scoreOfficialLookup(record, query) {
+  const text = String(query || "").toLowerCase();
+  const title = String(record.title || "").toLowerCase();
+  const claim = String(record.claim || "").toLowerCase();
+  const role = String(record.role || "").toLowerCase();
+  const type = String(record.recordType || "").toLowerCase();
+  const topic = String(record.topic || "").toLowerCase();
+  const sourceId = String(record.sourceId || "").toLowerCase();
+  const recordNumbers = queryRecordNumbers(text);
+
+  let score = 0;
+  const isRoster = type === "official-roster";
+  if (isRoster && /\bwho\b|\bofficial roster\b|\blisted by the city\b/.test(text)) score += 12;
+  if (isRoster && /\bcity manager\b/.test(text) && (role === "city manager" || title.includes("city manager"))) score += 35;
+  if (isRoster && /\bcity clerk\b/.test(text) && (role === "city clerk" || title.includes("city clerk"))) score += 35;
+  if (isRoster && /\bmayor\b/.test(text) && (role === "mayor" || title.includes("mayor"))) score += 35;
+  if (isRoster && /\bcommissioners?\b/.test(text) && role.includes("commissioner")) score += 30;
+  for (const number of recordNumbers) {
+    if (title.includes(number) || claim.includes(number)) score += 45;
+  }
+  if (topic === "ltc" && /\bltcs?\b|letters? to commission/.test(text)) score += 12;
+  if (topic === "legislation" && /\bresolution|ordinance/.test(text)) score += 12;
+  if (sourceId.includes("city-manager") && /\bcity manager\b/.test(text)) score += 8;
+  if (sourceId.includes("mayor") && /\bmayor|commissioners?\b/.test(text)) score += 8;
   return score;
 }
 
@@ -191,7 +230,12 @@ export class MemoryStore {
         }
         return true;
       })
-      .map((record) => ({ ...record, score: queryTokens.length || dateMatches.size ? scoreRecord(record, queryTokens, dateMatches) : 1 }))
+      .map((record) => ({
+        ...record,
+        score: queryTokens.length || dateMatches.size
+          ? scoreRecord(record, queryTokens, dateMatches) + scoreOfficialLookup(record, query)
+          : 1 + scoreOfficialLookup(record, query)
+      }))
       .filter((record) => record.score > 0)
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;

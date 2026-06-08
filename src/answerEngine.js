@@ -38,6 +38,8 @@ function detectPeople(text) {
 
 function detectTopic(text) {
   const lower = text.toLowerCase();
+  if (/\bltcs?\b|letters? to commission/i.test(lower)) return "LTC";
+  if (/\bresolution|ordinance|legislation/i.test(lower)) return "legislation";
   return TOPIC_RULES.find(([, needles]) => needles.some((needle) => lower.includes(needle)))?.[0] || "";
 }
 
@@ -80,6 +82,16 @@ function outputText(payload) {
     .join("")
     .trim();
 }
+
+function officialLookupFilter(query) {
+  const text = String(query || "").toLowerCase();
+  if (/\bcity manager\b/.test(text)) return (record) => /city manager/i.test(`${record.title || ""} ${record.role || ""}`);
+  if (/\bcity clerk\b/.test(text)) return (record) => /city clerk/i.test(`${record.title || ""} ${record.role || ""}`);
+  if (/\bmayor\b/.test(text)) return (record) => /mayor/i.test(`${record.title || ""} ${record.role || ""}`);
+  if (/\bcommissioners?\b/.test(text)) return (record) => /commissioner/i.test(`${record.title || ""} ${record.role || ""}`);
+  return null;
+}
+
 
 async function askOpenAI({ question, mode, recommendation, evidence }) {
   if (!hasUsableOpenAiKey() || !evidence.length) return null;
@@ -135,14 +147,20 @@ export async function answerQuestion({ memoryStore, question }) {
   const topic = detectTopic(query);
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(query);
   const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(query);
+  const asksOfficialLookup = /\bwho\b|\bofficial roster\b|\blisted by the city\b|\bcity manager\b|\bcity clerk\b|\bmayor\b|\bcommissioners?\b/i.test(query);
   const targetedQuery = [query, person, topic].filter(Boolean).join(" ");
 
-  const records = memoryStore.searchRecords(targetedQuery, {
+  let records = memoryStore.searchRecords(targetedQuery, {
     limit: 8,
-    topic: topic && !["LTC", "legislation", "officials"].includes(topic) ? topic : undefined,
+    topic: topic && !["legislation", "officials"].includes(topic) ? topic : undefined,
     person: person || undefined
   });
   const documents = memoryStore.search(targetedQuery, { limit: 5 });
+  const officialFilter = asksOfficialLookup ? officialLookupFilter(query) : null;
+  if (officialFilter) {
+    const filteredRecords = records.filter(officialFilter);
+    if (filteredRecords.length) records = filteredRecords;
+  }
 
   let mode = "Source pull";
   let answer = "I found related source records in memory. Treat this as a lead until the official meeting record is opened.";
@@ -152,6 +170,10 @@ export async function answerQuestion({ memoryStore, question }) {
     mode = "Launch plan";
     answer = "To make this fully live for the next commission meeting, the core work is archive ingestion, live audio transcription, speaker labeling, secure dais access, and a verification workflow that forces every alert to cite an official source.";
     recommendation = "Start with the official meeting archive and MBTV feed: those unlock real-time transcript, source retrieval, and contradiction checks with confidence labels.";
+  } else if (asksOfficialLookup) {
+    mode = "Official lookup";
+    answer = "I found the official city roster/source record. Use the source card below as the authority for the name and role.";
+    recommendation = "Open the official roster or city department page before quoting the name or title.";
   } else if (person && topic && asksInconsistency) {
     mode = "Consistency check";
     answer = `${person} has related memory on ${topic}. This can flag possible differences immediately, but a final consistency call needs the official transcript or video timestamp.`;

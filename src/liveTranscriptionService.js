@@ -122,6 +122,8 @@ export class LiveTranscriptionService {
     } catch (error) {
       this.noteError(job, error);
       this.assistant.setSessionStatus(sessionId, "error");
+      this.jobs.delete(sessionId);
+      await fs.rm(workDir, { recursive: true, force: true }).catch(() => {});
       throw error;
     }
   }
