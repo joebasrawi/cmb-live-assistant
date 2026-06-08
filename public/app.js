@@ -449,7 +449,7 @@ function renderAlerts() {
   elements.dashboardAlertMetric.textContent = state.alerts.length;
   elements.alertsList.innerHTML = "";
   if (!state.alerts.length) {
-    elements.alertsList.append(emptyState("Proactive alerts will appear here when the live discussion differs from prior records or needs a vote-time context check."));
+    elements.alertsList.append(emptyState("Live catches will appear here."));
     return;
   }
 
@@ -541,8 +541,8 @@ function welcomeMessage() {
   const node = document.createElement("div");
   node.className = "welcome-message";
   node.innerHTML = `
-    <strong>Ready for dais questions.</strong>
-    <p>Ask a plain-English question, attach a file, or use a quick prompt. Every answer will show the sources it relied on.</p>
+    <strong>Ask anything from the dais.</strong>
+    <p>Answers include the official sources they rely on.</p>
   `;
   return node;
 }
@@ -570,7 +570,7 @@ function renderTranscript() {
   elements.dashboardTranscriptMetric.textContent = state.transcript.length;
   elements.transcriptList.innerHTML = "";
   if (!state.transcript.length) {
-    elements.transcriptList.append(emptyState("Transcript lines will appear here as the meeting audio is processed."));
+    elements.transcriptList.append(emptyState("Transcript appears in Full View."));
     return;
   }
 

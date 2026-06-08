@@ -12,7 +12,7 @@
         <div class="brand-block">
           <p class="eyebrow">City of Miami Beach</p>
           <h1>Live Staffer</h1>
-          <p class="subhead">Ask questions, catch issues, and open official sources during the meeting.</p>
+          <p class="subhead">Ask questions. Get sources. Catch issues live.</p>
         </div>
         <div class="topbar-actions">
           <button id="daisModeBtn" class="secondary">Dais Mode</button>
@@ -27,31 +27,31 @@
         <aside class="control-panel">
           <div class="panel-header">
             <div>
-              <h2>Meeting Controls</h2>
-              <p class="panel-kicker">Start a feed, run the demo, or add a live line.</p>
+              <h2>Controls</h2>
+              <p class="panel-kicker">Live stream first. Demo only for walkthroughs.</p>
             </div>
             <button id="refreshBtn" class="secondary compact-button" title="Refresh room" aria-label="Refresh room">Refresh</button>
           </div>
 
           <div class="control-grid">
-            <label class="field compact-field">
+            <label class="field compact-field session-field advanced-only">
               <span>Session</span>
               <select id="sessionSelect"></select>
             </label>
 
-            <label class="field source-field compact-field">
+            <label class="field source-field compact-field advanced-only">
               <span>Live source</span>
               <input id="liveSourceInput" type="url" placeholder="YouTube live, HLS, or audio stream URL">
             </label>
 
             <div class="button-row">
               <button id="startLiveBtn">Start Live</button>
-              <button id="startMicBtn" class="secondary">Mic</button>
               <button id="startDemoBtn" class="secondary">Demo</button>
               <button id="stopBtn" class="secondary">Stop</button>
+              <button id="startMicBtn" class="secondary advanced-only">Mic</button>
             </div>
 
-            <div class="room-facts">
+            <div class="room-facts advanced-only">
               <div>
                 <span>Memory</span>
                 <strong id="recordCount">0 prior records</strong>
@@ -63,7 +63,7 @@
             </div>
           </div>
 
-          <div class="manual-line">
+          <div class="manual-line advanced-only">
             <label class="field">
               <span>Add live line</span>
               <textarea id="manualText" rows="2" placeholder="Paste a live statement for the assistant to check."></textarea>
@@ -103,11 +103,11 @@
             <div id="answersList" class="chat-thread" aria-live="polite"></div>
             <div id="attachedFileLabel" class="attached-file" hidden></div>
             <div class="chat-composer">
-              <label class="attach-button" title="Attach file">
+              <label class="attach-button advanced-only" title="Attach file">
                 <input id="askFile" type="file" accept=".txt,.md,.csv,.json,.html,.htm,.pdf,.doc,.docx">
                 Attach
               </label>
-              <textarea id="askText" rows="2" placeholder="Ask anything about the live item, a commissioner, an LTC, a vote, a file, or a prior statement."></textarea>
+              <textarea id="askText" rows="2" placeholder="Ask a question..."></textarea>
               <button id="askBtn">Send</button>
             </div>
             <div class="prompt-row" aria-label="Quick questions">
