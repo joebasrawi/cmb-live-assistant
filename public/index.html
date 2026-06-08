@@ -11,8 +11,8 @@
       <header class="topbar">
         <div class="brand-block">
           <p class="eyebrow">City of Miami Beach</p>
-          <h1>Dais Intelligence</h1>
-          <p class="subhead">Live briefing dashboard for questions, alerts, transcripts, and source-backed record checks.</p>
+          <h1>Live Staffer</h1>
+          <p class="subhead">Ask questions, catch issues, and open official sources during the meeting.</p>
         </div>
         <div class="topbar-actions">
           <button id="daisModeBtn" class="secondary">Dais Mode</button>
@@ -26,42 +26,49 @@
       <section class="workspace">
         <aside class="control-panel">
           <div class="panel-header">
-            <h2>Dais Console</h2>
+            <div>
+              <h2>Meeting Controls</h2>
+              <p class="panel-kicker">Start a feed, run the demo, or add a live line.</p>
+            </div>
             <button id="refreshBtn" class="secondary compact-button" title="Refresh room" aria-label="Refresh room">Refresh</button>
           </div>
 
-          <label class="field">
-            <span>Session</span>
-            <select id="sessionSelect"></select>
-          </label>
+          <div class="control-grid">
+            <label class="field compact-field">
+              <span>Session</span>
+              <select id="sessionSelect"></select>
+            </label>
 
-          <label class="field">
-            <span>Live source URL</span>
-            <input id="liveSourceInput" type="url" placeholder="YouTube live, HLS, or audio stream URL">
-          </label>
+            <label class="field source-field compact-field">
+              <span>Live source</span>
+              <input id="liveSourceInput" type="url" placeholder="YouTube live, HLS, or audio stream URL">
+            </label>
 
-          <div class="button-row">
-            <button id="startLiveBtn">Start Live</button>
-            <button id="startMicBtn">Start Mic</button>
-            <button id="startDemoBtn">Start Demo</button>
-            <button id="stopBtn" class="secondary">Stop</button>
+            <div class="button-row">
+              <button id="startLiveBtn">Start Live</button>
+              <button id="startMicBtn" class="secondary">Mic</button>
+              <button id="startDemoBtn" class="secondary">Demo</button>
+              <button id="stopBtn" class="secondary">Stop</button>
+            </div>
+
+            <div class="room-facts">
+              <div>
+                <span>Memory</span>
+                <strong id="recordCount">0 prior records</strong>
+              </div>
+              <div>
+                <span>Source</span>
+                <a id="sourceUrl" href="https://www.youtube.com/c/CityofMiamiBeachTV/live" target="_blank" rel="noreferrer">Official live channel</a>
+              </div>
+            </div>
           </div>
 
-          <label class="field">
-            <span>Live input</span>
-            <textarea id="manualText" rows="6" placeholder="Paste a live line, e.g. I have always opposed Ocean Drive restrictions, and this has never come before us."></textarea>
-          </label>
-          <button id="sendLineBtn" class="wide">Send Line</button>
-
-          <div class="room-facts">
-            <div>
-              <span>Memory</span>
-              <strong id="recordCount">0 prior records</strong>
-            </div>
-            <div>
-              <span>Source</span>
-              <a id="sourceUrl" href="https://www.youtube.com/c/CityofMiamiBeachTV/live" target="_blank" rel="noreferrer">Official live channel</a>
-            </div>
+          <div class="manual-line">
+            <label class="field">
+              <span>Add live line</span>
+              <textarea id="manualText" rows="2" placeholder="Paste a live statement for the assistant to check."></textarea>
+            </label>
+            <button id="sendLineBtn" class="secondary">Send Line</button>
           </div>
         </aside>
 
@@ -89,7 +96,7 @@
             <div class="panel-header chat-header">
               <div>
                 <h2>Ask the Staffer</h2>
-                <p class="panel-kicker">A live source-backed chat for the dais.</p>
+                <p class="panel-kicker">Source-backed answers for the dais.</p>
               </div>
               <span id="answerCount" class="counter">0 answers</span>
             </div>
@@ -104,9 +111,9 @@
               <button id="askBtn">Send</button>
             </div>
             <div class="prompt-row" aria-label="Quick questions">
-              <button class="prompt-chip" data-prompt="Is this inconsistent with anything said before?">Inconsistency</button>
-              <button class="prompt-chip" data-prompt="Pull the best source for this item.">Best source</button>
-              <button class="prompt-chip" data-prompt="What should the commissioner ask before voting?">Vote check</button>
+              <button class="prompt-chip" data-prompt="Who is the City Manager and where is the official source?">City Manager</button>
+              <button class="prompt-chip" data-prompt="Pull the best source for LTCs about Ocean Drive.">Ocean Drive LTCs</button>
+              <button class="prompt-chip" data-prompt="What should the commissioner ask before voting on an item with fiscal impact and procurement concerns?">Vote Check</button>
             </div>
           </section>
 
@@ -128,14 +135,12 @@
 
         <aside class="context-panel">
           <div class="live-plan">
-            <p class="eyebrow">Next Live Meeting</p>
-            <h2>Production Readiness</h2>
+            <p class="eyebrow">Meeting Feed</p>
+            <h2>Live Source</h2>
             <p id="nextMeetingLine" class="meeting-line">Checking official PrimeGov feed.</p>
             <div class="readiness-list">
-              <div><span>1</span><strong>Archive ingest</strong><p>Index meetings, agendas, LTCs, ordinances, resolutions, business impact estimates, and video links from 2020 forward.</p></div>
-              <div><span>2</span><strong>Live audio feed</strong><p>Connect MBTV or room audio to transcription with speaker labeling.</p></div>
-              <div><span>3</span><strong>Secure dais access</strong><p>Add login, commissioner profiles, audit logs, and private deployment.</p></div>
-              <div><span>4</span><strong>Source verification</strong><p>Require citations, confidence labels, and one-click official records before any recommendation.</p></div>
+              <div><span>1</span><strong>Official records</strong><p>Agendas, LTCs, resolutions, ordinances, and video links are indexed from city sources.</p></div>
+              <div><span>2</span><strong>Live notes</strong><p>Detected names, items, and policy topics appear here as the meeting moves.</p></div>
             </div>
           </div>
 

@@ -25,14 +25,15 @@
   box-sizing: border-box;
 }
 
+html,
+body {
+  overflow-x: hidden;
+}
+
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 16% 0%, rgba(36, 181, 216, 0.16), transparent 34%),
-    radial-gradient(circle at 84% 12%, rgba(167, 139, 250, 0.15), transparent 30%),
-    linear-gradient(180deg, #0b1422 0, #08111d 360px),
-    var(--paper);
+  background: linear-gradient(180deg, #101923 0, #08111d 360px), var(--paper);
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -87,10 +88,10 @@ button.wide {
 }
 
 .topbar {
-  min-height: 104px;
-  padding: 20px 26px;
+  min-height: 86px;
+  padding: 18px 24px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 17, 29, 0.8);
+  background: rgba(8, 17, 29, 0.92);
   color: #ffffff;
   backdrop-filter: blur(18px);
   display: flex;
@@ -121,7 +122,7 @@ p {
 
 h1 {
   margin-bottom: 4px;
-  font-size: 30px;
+  font-size: 28px;
   line-height: 1.1;
 }
 
@@ -142,6 +143,7 @@ h3 {
   margin: 0;
   color: var(--muted);
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .topbar .subhead {
@@ -158,6 +160,7 @@ h3 {
   gap: 12px;
   flex-wrap: wrap;
   justify-content: flex-end;
+  min-width: 0;
 }
 
 .status-strip {
@@ -193,11 +196,16 @@ h3 {
 
 .workspace {
   flex: 1;
+  width: 100%;
   min-height: 0;
+  min-width: 0;
   display: grid;
-  grid-template-columns: minmax(245px, 300px) minmax(480px, 1fr) minmax(320px, 410px);
-  gap: 12px;
-  padding: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, 360px);
+  grid-template-areas:
+    "controls controls"
+    "main context";
+  gap: 10px;
+  padding: 10px;
   background: transparent;
 }
 
@@ -205,20 +213,31 @@ h3 {
 .briefing-panel,
 .context-panel {
   min-height: 0;
+  min-width: 0;
   background: var(--surface);
-  padding: 18px;
+  padding: 16px;
   overflow: auto;
   border: 1px solid var(--line);
   border-radius: 8px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(16px);
 }
 
+.control-panel {
+  grid-area: controls;
+  overflow: visible;
+}
+
 .briefing-panel {
+  grid-area: main;
   display: grid;
   align-content: start;
-  gap: 14px;
+  gap: 12px;
   background: rgba(10, 21, 36, 0.78);
+}
+
+.context-panel {
+  grid-area: context;
 }
 
 .panel-header {
@@ -240,17 +259,18 @@ h3 {
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
 }
 
 .metric-tile {
   display: grid;
-  gap: 6px;
-  min-height: 78px;
+  min-width: 0;
+  gap: 5px;
+  min-height: 66px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.035));
-  padding: 13px;
+  background: rgba(255, 255, 255, 0.052);
+  padding: 11px;
 }
 
 .metric-tile span {
@@ -261,26 +281,25 @@ h3 {
 }
 
 .metric-tile strong {
-  font-size: 26px;
+  font-size: 22px;
   line-height: 1;
   color: #ffffff;
 }
 
 .metric-tile.accent {
-  background: linear-gradient(145deg, rgba(36, 181, 216, 0.18), rgba(94, 224, 184, 0.08));
+  background: rgba(94, 224, 184, 0.09);
   border-color: rgba(31, 111, 145, 0.2);
 }
 
 .chat-panel {
   display: grid;
+  min-width: 0;
   gap: 10px;
   border: 1px solid rgba(36, 181, 216, 0.22);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(36, 181, 216, 0.08), rgba(255, 255, 255, 0.03)),
-    rgba(15, 26, 42, 0.95);
+  background: rgba(15, 26, 42, 0.95);
   padding: 14px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.26);
 }
 
 .chat-header {
@@ -311,6 +330,7 @@ select,
 textarea,
 input {
   width: 100%;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 7px;
   background: rgba(255, 255, 255, 0.055);
@@ -321,7 +341,7 @@ input {
 .chat-thread {
   display: grid;
   gap: 13px;
-  max-height: 520px;
+  max-height: 430px;
   overflow: auto;
   padding: 2px 4px 4px;
 }
@@ -333,6 +353,7 @@ input {
 
 .chat-message {
   width: min(92%, 760px);
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -345,7 +366,7 @@ input {
 
 .user-message {
   justify-self: end;
-  background: linear-gradient(135deg, rgba(36, 181, 216, 0.3), rgba(167, 139, 250, 0.24));
+  background: rgba(36, 181, 216, 0.22);
   color: #ffffff;
 }
 
@@ -366,6 +387,7 @@ input {
 
 .chat-composer {
   display: grid;
+  min-width: 0;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: end;
@@ -441,17 +463,22 @@ textarea {
 
 .button-row {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(4, minmax(88px, 1fr));
   gap: 8px;
-  margin-bottom: 14px;
+  margin-bottom: 0;
 }
 
 .room-facts {
   display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 15px;
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid var(--line);
+  margin-top: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
   overflow-wrap: anywhere;
 }
 
@@ -474,7 +501,7 @@ a {
 }
 
 .empty-state {
-  min-height: 132px;
+  min-height: 104px;
   display: grid;
   place-items: center;
   border: 1px dashed var(--line);
@@ -486,7 +513,7 @@ a {
 }
 
 .welcome-message {
-  min-height: 150px;
+  min-height: 120px;
   display: grid;
   align-content: center;
   gap: 8px;
@@ -501,6 +528,7 @@ a {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .alert-item,
@@ -515,7 +543,7 @@ a {
 }
 
 .alert-item {
-  box-shadow: var(--shadow);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.18);
   border-left: 6px solid var(--gold);
 }
 
@@ -576,6 +604,7 @@ a {
 .note-body,
 .evidence-item p {
   line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .alert-item p {
@@ -698,8 +727,8 @@ a {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.055);
-  padding: 14px;
-  margin-bottom: 18px;
+  padding: 13px;
+  margin-bottom: 16px;
 }
 
 .meeting-line {
@@ -713,7 +742,7 @@ a {
 
 .readiness-list {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin-top: 12px;
 }
 
@@ -746,12 +775,60 @@ a {
   line-height: 1.35;
 }
 
+.control-grid {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(240px, 1fr) minmax(360px, auto) minmax(260px, 360px);
+  gap: 10px;
+  align-items: end;
+}
+
+.compact-field {
+  margin-bottom: 0;
+}
+
+.manual-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.manual-line .field {
+  margin-bottom: 0;
+}
+
+.manual-line textarea {
+  min-height: 44px;
+  max-height: 110px;
+}
+
 body.dais-mode .control-panel {
-  display: none;
+  display: block;
 }
 
 body.dais-mode .workspace {
-  grid-template-columns: minmax(520px, 1.2fr) minmax(340px, 0.8fr);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "controls"
+    "main";
+}
+
+body.dais-mode .context-panel {
+  display: none;
+}
+
+body.dais-mode .control-panel .panel-header,
+body.dais-mode .control-panel .source-field,
+body.dais-mode .control-panel .room-facts,
+body.dais-mode .manual-line {
+  display: none;
+}
+
+body.dais-mode .control-grid {
+  grid-template-columns: minmax(160px, 1fr) minmax(360px, auto);
 }
 
 body.dais-mode .topbar {
@@ -892,10 +969,18 @@ body.modal-open {
   .workspace,
   body.dais-mode .workspace {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "controls"
+      "main"
+      "context";
   }
 
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .control-grid {
+    grid-template-columns: 1fr;
   }
 
   .control-panel,
@@ -905,15 +990,15 @@ body.modal-open {
   }
 
   .briefing-panel {
-    order: 1;
+    order: initial;
   }
 
   .control-panel {
-    order: 2;
+    order: initial;
   }
 
   .context-panel {
-    order: 3;
+    order: initial;
   }
 }
 
@@ -944,6 +1029,13 @@ body.modal-open {
   }
 
   .chat-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row,
+  .room-facts,
+  .manual-line,
+  body.dais-mode .control-grid {
     grid-template-columns: 1fr;
   }
 

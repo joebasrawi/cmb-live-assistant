@@ -14,7 +14,7 @@ const state = {
   micActive: false,
   speechRecognition: null,
   accessToken: sessionStorage.getItem("cmb-access-token") || "",
-  daisMode: localStorage.getItem("cmb-dais-mode") === "true",
+  daisMode: localStorage.getItem("cmb-dais-mode") !== "false",
   staticMode: false,
   staticTimer: null
 };
@@ -1224,7 +1224,7 @@ function staticAlert(priority, title, body, recommendation, evidence, segment) {
 function setDaisMode(enabled) {
   state.daisMode = enabled;
   document.body.classList.toggle("dais-mode", enabled);
-  elements.daisModeBtn.textContent = enabled ? "Exit Dais Mode" : "Dais Mode";
+  elements.daisModeBtn.textContent = enabled ? "Full View" : "Dais Mode";
   localStorage.setItem("cmb-dais-mode", String(enabled));
 }
 
