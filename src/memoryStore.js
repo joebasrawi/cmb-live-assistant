@@ -1,12 +1,84 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 
+const STOPWORDS = new Set([
+  "about",
+  "and",
+  "are",
+  "can",
+  "could",
+  "for",
+  "from",
+  "into",
+  "listed",
+  "official",
+  "open",
+  "please",
+  "pull",
+  "should",
+  "source",
+  "sources",
+  "that",
+  "the",
+  "this",
+  "use",
+  "using",
+  "was",
+  "what",
+  "when",
+  "where",
+  "which",
+  "with",
+  "would"
+]);
+
 export function tokenize(value) {
   return String(value || "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, " ")
     .split(/\s+/)
-    .filter((token) => token.length > 2);
+    .filter((token) => token.length > 2 && !STOPWORDS.has(token));
+}
+
+function queryDates(value) {
+  const text = String(value || "").toLowerCase();
+  const dates = new Set();
+  const monthMap = new Map([
+    ["jan", "01"],
+    ["january", "01"],
+    ["feb", "02"],
+    ["february", "02"],
+    ["mar", "03"],
+    ["march", "03"],
+    ["apr", "04"],
+    ["april", "04"],
+    ["may", "05"],
+    ["jun", "06"],
+    ["june", "06"],
+    ["jul", "07"],
+    ["july", "07"],
+    ["aug", "08"],
+    ["august", "08"],
+    ["sep", "09"],
+    ["sept", "09"],
+    ["september", "09"],
+    ["oct", "10"],
+    ["october", "10"],
+    ["nov", "11"],
+    ["november", "11"],
+    ["dec", "12"],
+    ["december", "12"]
+  ]);
+
+  for (const match of text.matchAll(/\b(20\d{2})[-/](\d{1,2})[-/](\d{1,2})\b/g)) {
+    dates.add(`${match[1]}-${match[2].padStart(2, "0")}-${match[3].padStart(2, "0")}`);
+  }
+  for (const match of text.matchAll(/\b([a-z]{3,9})\s+(\d{1,2})(?:st|nd|rd|th)?[,]?\s+(20\d{2})\b/g)) {
+    const month = monthMap.get(match[1]);
+    if (month) dates.add(`${match[3]}-${month}-${match[2].padStart(2, "0")}`);
+  }
+
+  return dates;
 }
 
 function scoreDocument(document, queryTokens) {
@@ -22,7 +94,7 @@ function scoreDocument(document, queryTokens) {
   return score;
 }
 
-function scoreRecord(record, queryTokens) {
+function scoreRecord(record, queryTokens, dateMatches = new Set()) {
   const haystack = [
     record.title,
     record.recordType,
@@ -45,6 +117,7 @@ function scoreRecord(record, queryTokens) {
     if (String(record.person || "").toLowerCase().includes(token)) score += 2;
     if (String(record.agendaItem || "").toLowerCase().includes(token)) score += 2;
   }
+  if (dateMatches.has(String(record.meetingDate || ""))) score += 20;
 
   return score;
 }
@@ -103,6 +176,7 @@ export class MemoryStore {
 
   searchRecords(query, { limit = 8, topic, person, stance } = {}) {
     const queryTokens = tokenize(query);
+    const dateMatches = queryDates(query);
     const topicNeedle = String(topic || "").toLowerCase();
     const personNeedle = String(person || "").toLowerCase();
     const stanceNeedle = String(stance || "").toLowerCase();
@@ -117,7 +191,7 @@ export class MemoryStore {
         }
         return true;
       })
-      .map((record) => ({ ...record, score: queryTokens.length ? scoreRecord(record, queryTokens) : 1 }))
+      .map((record) => ({ ...record, score: queryTokens.length || dateMatches.size ? scoreRecord(record, queryTokens, dateMatches) : 1 }))
       .filter((record) => record.score > 0)
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
