@@ -39,7 +39,8 @@ body {
 
 button,
 select,
-textarea {
+textarea,
+input {
   font: inherit;
 }
 
@@ -307,7 +308,8 @@ h3 {
 }
 
 select,
-textarea {
+textarea,
+input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -439,7 +441,7 @@ textarea {
 
 .button-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   margin-bottom: 14px;
 }

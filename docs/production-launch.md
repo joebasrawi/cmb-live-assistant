@@ -53,7 +53,7 @@ Full raw archive storage is a different project. Downloading every PDF, packet, 
 
 1. Deploy the Node backend behind HTTPS with `ACCESS_TOKEN` enabled.
 2. Point `CMB_DEFAULT_LIVE_URL` at the official live feed.
-3. Add a transcription worker that posts final transcript lines to:
+3. Add `OPENAI_API_KEY` and use the dashboard **Start Live** button. The Railway Docker image includes `ffmpeg` and `yt-dlp`; the server cuts audio into short chunks, transcribes them, then posts final transcript lines to:
 
 ```text
 POST /api/sessions/:sessionId/transcript

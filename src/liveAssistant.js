@@ -50,6 +50,17 @@ export class LiveAssistant {
     return session ? this.publicSession(session) : null;
   }
 
+  setSessionStatus(id, status, { sourceUrl } = {}) {
+    const session = this.sessions.get(id);
+    if (!session) return null;
+    session.status = status;
+    if (sourceUrl) session.sourceUrl = sourceUrl;
+    session.updatedAt = new Date().toISOString();
+    this.broadcast(id, "status", { status: session.status });
+    this.broadcast(id, "snapshot", this.publicSession(session));
+    return this.publicSession(session);
+  }
+
   publicSession(session) {
     return {
       id: session.id,

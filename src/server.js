@@ -6,6 +6,7 @@ import { MemoryStore } from "./memoryStore.js";
 import { LiveAssistant } from "./liveAssistant.js";
 import { ProactiveWatcher } from "./proactiveWatcher.js";
 import { answerQuestion } from "./answerEngine.js";
+import { LiveTranscriptionService } from "./liveTranscriptionService.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -17,6 +18,7 @@ await memoryStore.load();
 
 const proactiveWatcher = new ProactiveWatcher({ memoryStore });
 const assistant = new LiveAssistant({ memoryStore, proactiveWatcher, rootDir });
+const liveTranscription = new LiveTranscriptionService({ assistant, rootDir });
 const defaultSession = assistant.createSession({
   title: "CMB Commission live room",
   sourceUrl: process.env.CMB_DEFAULT_LIVE_URL
@@ -83,7 +85,8 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, {
       ok: true,
       service: "cmb-live-assistant",
-      defaultSessionId: defaultSession.id
+      defaultSessionId: defaultSession.id,
+      live: liveTranscription.readiness()
     });
   }
 
@@ -110,9 +113,13 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, { q, results: memoryStore.searchRecords(q, { topic, limit: 20 }) });
   }
 
+  if (request.method === "GET" && url.pathname === "/api/live/status") {
+    return sendJson(response, 200, liveTranscription.status(url.searchParams.get("sessionId") || undefined));
+  }
+
   if (request.method === "POST" && url.pathname === "/api/ask") {
     const body = await readJson(request);
-    const answer = answerQuestion({ memoryStore, question: body.question });
+    const answer = await answerQuestion({ memoryStore, question: body.question });
     return sendJson(response, 200, { answer });
   }
 
@@ -158,7 +165,14 @@ async function handleApi(request, response, url) {
       return session ? sendJson(response, 200, { session }) : notFound(response);
     }
 
+    if (request.method === "POST" && action === "start-live") {
+      const body = await readJson(request);
+      const job = await liveTranscription.start({ sessionId, sourceUrl: body.sourceUrl });
+      return sendJson(response, 200, { job });
+    }
+
     if (request.method === "POST" && action === "stop") {
+      await liveTranscription.stop(sessionId, { silent: true });
       const session = assistant.stopDemo(sessionId);
       return session ? sendJson(response, 200, { session }) : notFound(response);
     }
@@ -176,7 +190,7 @@ const server = http.createServer(async (request, response) => {
     }
     await serveStatic(request, response, url.pathname);
   } catch (error) {
-    sendJson(response, 500, { error: error.message });
+    sendJson(response, error.status || 500, { error: error.message });
   }
 });
 

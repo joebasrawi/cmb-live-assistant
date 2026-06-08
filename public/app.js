@@ -294,6 +294,8 @@ const elements = {
   daisModeBtn: document.querySelector("#daisModeBtn"),
   refreshBtn: document.querySelector("#refreshBtn"),
   sessionSelect: document.querySelector("#sessionSelect"),
+  liveSourceInput: document.querySelector("#liveSourceInput"),
+  startLiveBtn: document.querySelector("#startLiveBtn"),
   startDemoBtn: document.querySelector("#startDemoBtn"),
   stopBtn: document.querySelector("#stopBtn"),
   manualText: document.querySelector("#manualText"),
@@ -352,6 +354,13 @@ function setStatus(text, mode = "idle") {
   elements.statusDot.classList.toggle("error", mode === "error");
 }
 
+function statusDisplay(status) {
+  if (status === "live") return { text: "Live", mode: "live" };
+  if (status === "starting") return { text: "Starting", mode: "live" };
+  if (status === "error") return { text: "Issue", mode: "error" };
+  return { text: "Idle", mode: "idle" };
+}
+
 async function api(path, options = {}) {
   const headers = {
     "Content-Type": "application/json",
@@ -365,7 +374,14 @@ async function api(path, options = {}) {
   });
 
   if (!response.ok) {
-    const error = new Error(`${response.status} ${response.statusText}`);
+    let detail = "";
+    try {
+      const payload = await response.json();
+      detail = payload.error || "";
+    } catch {
+      detail = await response.text().catch(() => "");
+    }
+    const error = new Error(detail || `${response.status} ${response.statusText}`);
     error.status = response.status;
     throw error;
   }
@@ -412,7 +428,11 @@ function renderSnapshot(session) {
   state.references = session.references || [];
   elements.sourceUrl.href = session.sourceUrl;
   elements.sourceUrl.textContent = session.sourceUrl;
-  setStatus(session.status === "live" ? "Live" : "Idle", session.status === "live" ? "live" : "idle");
+  if (document.activeElement !== elements.liveSourceInput) {
+    elements.liveSourceInput.value = session.sourceUrl || "";
+  }
+  const display = statusDisplay(session.status);
+  setStatus(display.text, display.mode);
   renderDashboardMetrics();
   renderAnswers();
   renderAlerts();
@@ -660,7 +680,8 @@ function connectEvents() {
 
   state.eventSource.addEventListener("status", (event) => {
     const status = JSON.parse(event.data).status;
-    setStatus(status === "live" ? "Live" : "Idle", status === "live" ? "live" : "idle");
+    const display = statusDisplay(status);
+    setStatus(display.text, display.mode);
   });
 
   state.eventSource.onerror = () => setStatus("Connection issue", "error");
@@ -765,6 +786,32 @@ async function startDemo() {
     return;
   }
   await api(`/api/sessions/${state.currentSessionId}/start-demo`, { method: "POST", body: "{}" });
+}
+
+async function startLive() {
+  const sourceUrl = elements.liveSourceInput.value.trim();
+  if (state.staticMode) {
+    setStatus("Backend needed", "error");
+    return;
+  }
+  try {
+    setStatus("Starting", "live");
+    await api(`/api/sessions/${state.currentSessionId}/start-live`, {
+      method: "POST",
+      body: JSON.stringify({ sourceUrl })
+    });
+  } catch (error) {
+    setStatus("Issue", "error");
+    state.notes.unshift({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      title: "Live transcription did not start",
+      body: error.message,
+      confidence: "needs-setup",
+      sources: []
+    });
+    renderNotes();
+  }
 }
 
 async function stopSession() {
@@ -1167,6 +1214,7 @@ function escapeClass(value) {
 }
 
 elements.refreshBtn.addEventListener("click", loadSessions);
+elements.startLiveBtn.addEventListener("click", startLive);
 elements.startDemoBtn.addEventListener("click", startDemo);
 elements.stopBtn.addEventListener("click", stopSession);
 elements.sendLineBtn.addEventListener("click", sendManualLine);

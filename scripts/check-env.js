@@ -22,5 +22,5 @@ for (const item of checks) {
 }
 
 if (!process.env.OPENAI_API_KEY) {
-  console.log("\nOPENAI_API_KEY is only needed when live transcription/model calls are enabled.");
+  console.log("\nOPENAI_API_KEY is required for Start Live / live transcription.");
 }

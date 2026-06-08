@@ -25,6 +25,8 @@ const TOPIC_RULES = [
   ["officials", ["mayor", "commissioner", "city manager", "city clerk"]]
 ];
 
+const OPENAI_ANSWER_MODEL = process.env.OPENAI_ANSWER_MODEL || "gpt-4.1-mini";
+
 function detectPeople(text) {
   const lower = text.toLowerCase();
   return PEOPLE.filter((person) => {
@@ -69,7 +71,63 @@ function compactRecord(record) {
   };
 }
 
-export function answerQuestion({ memoryStore, question }) {
+function outputText(payload) {
+  if (payload.output_text) return payload.output_text;
+  return (payload.output || [])
+    .flatMap((item) => item.content || [])
+    .map((content) => content.text || "")
+    .join("")
+    .trim();
+}
+
+async function askOpenAI({ question, mode, recommendation, evidence }) {
+  if (!process.env.OPENAI_API_KEY || !evidence.length) return null;
+
+  const response = await fetch("https://api.openai.com/v1/responses", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      model: OPENAI_ANSWER_MODEL,
+      instructions: [
+        "You are a source-backed live staff assistant for a City of Miami Beach commissioner.",
+        "Answer for use during a public meeting. Be concise, neutral, and careful.",
+        "Use only the provided evidence. Do not invent dates, votes, quotes, or legal conclusions.",
+        "If the evidence is only metadata, say that it is a lead and the source card should be opened.",
+        "Prefer wording like 'possible inconsistency' or 'prior record may differ', never accusations."
+      ].join(" "),
+      input: [
+        {
+          role: "user",
+          content: [
+            {
+              type: "input_text",
+              text: JSON.stringify({
+                question,
+                currentMode: mode,
+                defaultRecommendation: recommendation,
+                evidence
+              })
+            }
+          ]
+        }
+      ],
+      max_output_tokens: 450
+    })
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`OpenAI answer failed: ${response.status} ${body.slice(0, 200)}`);
+  }
+
+  const text = outputText(await response.json());
+  return text || null;
+}
+
+export async function answerQuestion({ memoryStore, question }) {
   const query = String(question || "").trim();
   const people = detectPeople(query);
   const person = people[0] || "";
@@ -111,7 +169,7 @@ export function answerQuestion({ memoryStore, question }) {
   for (const record of records.map(compactRecord)) evidenceMap.set(record.id, record);
   for (const document of documents.map(compactDocument)) evidenceMap.set(document.id, document);
 
-  return {
+  const answerPayload = {
     id: randomUUID(),
     at: new Date().toISOString(),
     question: query,
@@ -121,4 +179,21 @@ export function answerQuestion({ memoryStore, question }) {
     evidence: [...evidenceMap.values()].slice(0, 8),
     tokens: tokenize(query)
   };
+
+  try {
+    const aiAnswer = await askOpenAI({
+      question: query,
+      mode,
+      recommendation,
+      evidence: answerPayload.evidence
+    });
+    if (aiAnswer) {
+      answerPayload.mode = `${mode} + AI`;
+      answerPayload.answer = aiAnswer;
+    }
+  } catch (error) {
+    answerPayload.modelError = error.message;
+  }
+
+  return answerPayload;
 }

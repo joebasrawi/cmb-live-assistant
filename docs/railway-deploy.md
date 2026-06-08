@@ -25,7 +25,12 @@ Railway provides `PORT` automatically.
 
 ```text
 OPENAI_API_KEY=<your OpenAI API key>
+OPENAI_ANSWER_MODEL=gpt-4.1-mini
+OPENAI_TRANSCRIBE_MODEL=gpt-4o-mini-transcribe
+TRANSCRIPT_CHUNK_SECONDS=18
 ```
+
+`OPENAI_API_KEY` is required for the **Start Live** button. The Dockerfile installs `ffmpeg` and `yt-dlp` so Railway can resolve a YouTube live URL and cut live audio into transcription chunks.
 
 ## Health Check
 
