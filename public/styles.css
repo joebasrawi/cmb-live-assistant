@@ -768,6 +768,42 @@ body.modal-open {
   overflow: hidden;
 }
 
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(3, 8, 15, 0.82);
+  backdrop-filter: blur(18px);
+}
+
+.auth-gate[hidden] {
+  display: none;
+}
+
+.auth-card {
+  width: min(420px, 100%);
+  display: grid;
+  gap: 14px;
+  padding: 22px;
+  border: 1px solid rgba(36, 181, 216, 0.32);
+  border-radius: 8px;
+  background: #0e1a2a;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.auth-card h2,
+.auth-card p {
+  margin: 0;
+}
+
+.auth-error {
+  color: #ffc7c7;
+  font-size: 13px;
+}
+
 .source-modal[hidden] {
   display: none;
 }

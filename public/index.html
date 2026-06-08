@@ -159,6 +159,19 @@
         <div id="sourceModalBody" class="source-modal-body"></div>
       </section>
     </div>
+    <div id="authGate" class="auth-gate" hidden>
+      <section class="auth-card" aria-labelledby="authTitle">
+        <p class="eyebrow">Secure Dais Access</p>
+        <h2 id="authTitle">Enter Access Token</h2>
+        <p>Use the Railway access token for this live backend.</p>
+        <label class="field">
+          <span>Access token</span>
+          <input id="accessTokenInput" type="password" autocomplete="current-password" placeholder="Paste token">
+        </label>
+        <button id="accessTokenBtn" class="wide">Unlock Dashboard</button>
+        <p id="authError" class="auth-error" hidden></p>
+      </section>
+    </div>
     <script type="module" src="app.js"></script>
   </body>
 </html>

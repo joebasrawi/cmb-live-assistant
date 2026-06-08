@@ -11,6 +11,7 @@ const state = {
   archiveLoaded: false,
   archiveSummary: null,
   totalRecordCount: 0,
+  accessToken: sessionStorage.getItem("cmb-access-token") || "",
   daisMode: localStorage.getItem("cmb-dais-mode") === "true",
   staticMode: false,
   staticTimer: null
@@ -321,7 +322,11 @@ const elements = {
   sourceModal: document.querySelector("#sourceModal"),
   sourceModalTitle: document.querySelector("#sourceModalTitle"),
   sourceModalBody: document.querySelector("#sourceModalBody"),
-  closeSourceBtn: document.querySelector("#closeSourceBtn")
+  closeSourceBtn: document.querySelector("#closeSourceBtn"),
+  authGate: document.querySelector("#authGate"),
+  accessTokenInput: document.querySelector("#accessTokenInput"),
+  accessTokenBtn: document.querySelector("#accessTokenBtn"),
+  authError: document.querySelector("#authError")
 };
 
 function rebuildSourceIndex() {
@@ -348,16 +353,21 @@ function setStatus(text, mode = "idle") {
 }
 
 async function api(path, options = {}) {
+  const headers = {
+    "Content-Type": "application/json",
+    ...(options.headers || {})
+  };
+  if (state.accessToken) headers.Authorization = `Bearer ${state.accessToken}`;
+
   const response = await fetch(path, {
     ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options.headers || {})
-    }
+    headers
   });
 
   if (!response.ok) {
-    throw new Error(`${response.status} ${response.statusText}`);
+    const error = new Error(`${response.status} ${response.statusText}`);
+    error.status = response.status;
+    throw error;
   }
   return response.json();
 }
@@ -621,7 +631,8 @@ function connectEvents() {
   if (!state.currentSessionId) return;
   if (state.eventSource) state.eventSource.close();
 
-  state.eventSource = new EventSource(`/api/sessions/${state.currentSessionId}/events`);
+  const tokenParam = state.accessToken ? `?access_token=${encodeURIComponent(state.accessToken)}` : "";
+  state.eventSource = new EventSource(`/api/sessions/${state.currentSessionId}/events${tokenParam}`);
 
   state.eventSource.addEventListener("snapshot", (event) => {
     renderSnapshot(JSON.parse(event.data));
@@ -670,10 +681,42 @@ async function loadSessions() {
     elements.dashboardMemoryMetric.textContent = recordCount;
     updateNextMeetingLine(recordsPayload.records);
     renderSessions(sessionsPayload.defaultSessionId);
+    hideAuthGate();
     connectEvents();
-  } catch {
+  } catch (error) {
+    if (error.status === 401) {
+      showAuthGate();
+      return;
+    }
     startStaticMode();
   }
+}
+
+function showAuthGate(message = "Enter the access token to use the live Railway backend.") {
+  elements.authGate.hidden = false;
+  elements.authError.hidden = !message;
+  elements.authError.textContent = message || "";
+  elements.accessTokenInput.value = state.accessToken;
+  setStatus("Locked", "error");
+  setTimeout(() => elements.accessTokenInput.focus(), 0);
+}
+
+function hideAuthGate() {
+  elements.authGate.hidden = true;
+  elements.authError.hidden = true;
+  elements.authError.textContent = "";
+}
+
+async function submitAccessToken() {
+  const token = elements.accessTokenInput.value.trim();
+  if (!token) {
+    showAuthGate("Paste the Railway access token first.");
+    return;
+  }
+  state.accessToken = token;
+  sessionStorage.setItem("cmb-access-token", token);
+  hideAuthGate();
+  await loadSessions();
 }
 
 async function loadPublicArchiveRecords() {
@@ -1146,6 +1189,12 @@ elements.sessionSelect.addEventListener("change", () => {
   connectEvents();
 });
 elements.closeSourceBtn.addEventListener("click", closeSourceModal);
+elements.accessTokenBtn.addEventListener("click", submitAccessToken);
+elements.accessTokenInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  submitAccessToken();
+});
 elements.sourceModal.addEventListener("click", (event) => {
   if (event.target.matches("[data-close-source]")) closeSourceModal();
 });

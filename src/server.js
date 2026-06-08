@@ -41,10 +41,10 @@ async function readJson(request) {
   return body ? JSON.parse(body) : {};
 }
 
-function isAuthorized(request) {
+function isAuthorized(request, url) {
   if (!process.env.ACCESS_TOKEN) return true;
   const header = request.headers.authorization || "";
-  return header === `Bearer ${process.env.ACCESS_TOKEN}`;
+  return header === `Bearer ${process.env.ACCESS_TOKEN}` || url.searchParams.get("access_token") === process.env.ACCESS_TOKEN;
 }
 
 function contentTypeFor(filePath) {
@@ -79,16 +79,16 @@ async function serveStatic(request, response, pathname) {
 }
 
 async function handleApi(request, response, url) {
-  if (!isAuthorized(request)) {
-    return sendJson(response, 401, { error: "Unauthorized" });
-  }
-
   if (request.method === "GET" && url.pathname === "/api/health") {
     return sendJson(response, 200, {
       ok: true,
       service: "cmb-live-assistant",
       defaultSessionId: defaultSession.id
     });
+  }
+
+  if (!isAuthorized(request, url)) {
+    return sendJson(response, 401, { error: "Unauthorized" });
   }
 
   if (request.method === "GET" && url.pathname === "/api/memory") {
