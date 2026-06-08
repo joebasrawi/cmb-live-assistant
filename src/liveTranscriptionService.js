@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
+import { hasUsableOpenAiKey } from "./openaiConfig.js";
 
 const DEFAULT_CHUNK_SECONDS = Number(process.env.TRANSCRIPT_CHUNK_SECONDS || 18);
 const OPENAI_TRANSCRIBE_MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
@@ -52,7 +53,7 @@ export class LiveTranscriptionService {
 
   readiness() {
     return {
-      openAiConfigured: Boolean(process.env.OPENAI_API_KEY),
+      openAiConfigured: hasUsableOpenAiKey(),
       ffmpegAvailable: commandAvailable("ffmpeg", ["-version"]),
       ytDlpAvailable: commandAvailable("yt-dlp", ["--version"]),
       model: OPENAI_TRANSCRIBE_MODEL,
@@ -71,7 +72,7 @@ export class LiveTranscriptionService {
   async start({ sessionId, sourceUrl }) {
     const readiness = this.readiness();
     if (!readiness.openAiConfigured) {
-      throw setupError("OPENAI_API_KEY is required before live transcription can start.");
+      throw setupError("A valid OPENAI_API_KEY is required before live transcription can start.");
     }
     if (!readiness.ffmpegAvailable) {
       throw setupError("ffmpeg is required before live transcription can start.");

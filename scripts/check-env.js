@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { hasUsableOpenAiKey } from "../src/openaiConfig.js";
 
 function checkCommand(name, args = ["--version"]) {
   const result = spawnSync(name, args, { encoding: "utf8" });
@@ -10,7 +11,7 @@ function checkCommand(name, args = ["--version"]) {
 }
 
 const checks = [
-  { name: "OPENAI_API_KEY", ok: Boolean(process.env.OPENAI_API_KEY), output: process.env.OPENAI_API_KEY ? "set" : "not set" },
+  { name: "OPENAI_API_KEY", ok: hasUsableOpenAiKey(), output: hasUsableOpenAiKey() ? "set" : "missing or invalid-looking" },
   checkCommand("ffmpeg", ["-version"]),
   checkCommand("yt-dlp", ["--version"])
 ];

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { tokenize } from "./memoryStore.js";
+import { hasUsableOpenAiKey } from "./openaiConfig.js";
 
 const PEOPLE = [
   "Steven Meiner",
@@ -81,7 +82,7 @@ function outputText(payload) {
 }
 
 async function askOpenAI({ question, mode, recommendation, evidence }) {
-  if (!process.env.OPENAI_API_KEY || !evidence.length) return null;
+  if (!hasUsableOpenAiKey() || !evidence.length) return null;
 
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
