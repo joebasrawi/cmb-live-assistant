@@ -11,6 +11,8 @@ const state = {
   archiveLoaded: false,
   archiveSummary: null,
   totalRecordCount: 0,
+  micActive: false,
+  speechRecognition: null,
   accessToken: sessionStorage.getItem("cmb-access-token") || "",
   daisMode: localStorage.getItem("cmb-dais-mode") === "true",
   staticMode: false,
@@ -296,6 +298,7 @@ const elements = {
   sessionSelect: document.querySelector("#sessionSelect"),
   liveSourceInput: document.querySelector("#liveSourceInput"),
   startLiveBtn: document.querySelector("#startLiveBtn"),
+  startMicBtn: document.querySelector("#startMicBtn"),
   startDemoBtn: document.querySelector("#startDemoBtn"),
   stopBtn: document.querySelector("#stopBtn"),
   manualText: document.querySelector("#manualText"),
@@ -802,19 +805,12 @@ async function startLive() {
     });
   } catch (error) {
     setStatus("Issue", "error");
-    state.notes.unshift({
-      id: crypto.randomUUID(),
-      at: new Date().toISOString(),
-      title: "Live transcription did not start",
-      body: error.message,
-      confidence: "needs-setup",
-      sources: []
-    });
-    renderNotes();
+    addLocalNote("Live transcription did not start", error.message);
   }
 }
 
 async function stopSession() {
+  stopMicCapture({ updateStatus: false });
   if (state.staticMode) {
     stopStaticDemo();
     return;
@@ -825,16 +821,89 @@ async function stopSession() {
 async function sendManualLine() {
   const text = elements.manualText.value.trim();
   if (!text) return;
+  await addTranscriptLine({ speaker: "Manual", text });
+  elements.manualText.value = "";
+}
+
+async function addTranscriptLine({ speaker, text }) {
   if (state.staticMode) {
-    addStaticTranscript({ speaker: "Manual", text });
-    elements.manualText.value = "";
+    addStaticTranscript({ speaker, text });
     return;
   }
   await api(`/api/sessions/${state.currentSessionId}/transcript`, {
     method: "POST",
-    body: JSON.stringify({ speaker: "Manual", text, isFinal: true })
+    body: JSON.stringify({ speaker, text, isFinal: true })
   });
-  elements.manualText.value = "";
+}
+
+function addLocalNote(title, body, confidence = "needs-setup") {
+  state.notes.unshift({
+    id: crypto.randomUUID(),
+    at: new Date().toISOString(),
+    title,
+    body,
+    confidence,
+    sources: []
+  });
+  renderNotes();
+}
+
+function startMicCapture() {
+  const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!Recognition) {
+    setStatus("Mic unavailable", "error");
+    addLocalNote("Browser mic capture is not available", "This browser does not expose SpeechRecognition. Use Chrome desktop, the server Start Live worker, or manual live input.");
+    return;
+  }
+
+  stopMicCapture({ updateStatus: false });
+  const recognition = new Recognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+  state.speechRecognition = recognition;
+  state.micActive = true;
+
+  recognition.onstart = () => setStatus("Mic live", "live");
+  recognition.onresult = (event) => {
+    for (let index = event.resultIndex; index < event.results.length; index += 1) {
+      const result = event.results[index];
+      if (!result.isFinal) continue;
+      const text = result[0]?.transcript?.trim();
+      if (text) addTranscriptLine({ speaker: "Dais mic", text }).catch((error) => addLocalNote("Mic transcript failed", error.message));
+    }
+  };
+  recognition.onerror = (event) => {
+    addLocalNote("Mic capture issue", event.error || "Speech recognition reported an error.");
+  };
+  recognition.onend = () => {
+    if (!state.micActive) return;
+    setTimeout(() => {
+      if (!state.micActive) return;
+      try {
+        recognition.start();
+      } catch (error) {
+        addLocalNote("Mic restart failed", error.message);
+      }
+    }, 500);
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    setStatus("Mic unavailable", "error");
+    addLocalNote("Mic capture did not start", error.message);
+  }
+}
+
+function stopMicCapture({ updateStatus = true } = {}) {
+  state.micActive = false;
+  if (state.speechRecognition) {
+    state.speechRecognition.onend = null;
+    state.speechRecognition.stop();
+  }
+  state.speechRecognition = null;
+  if (updateStatus && !state.staticMode) setStatus("Idle", "idle");
 }
 
 async function askStaffer() {
@@ -1215,6 +1284,7 @@ function escapeClass(value) {
 
 elements.refreshBtn.addEventListener("click", loadSessions);
 elements.startLiveBtn.addEventListener("click", startLive);
+elements.startMicBtn.addEventListener("click", startMicCapture);
 elements.startDemoBtn.addEventListener("click", startDemo);
 elements.stopBtn.addEventListener("click", stopSession);
 elements.sendLineBtn.addEventListener("click", sendManualLine);
