@@ -31,7 +31,7 @@ export class LiveAssistant {
     const session = {
       id: randomUUID(),
       title: title || "City of Miami Beach live meeting",
-      sourceUrl: sourceUrl || process.env.CMB_DEFAULT_LIVE_URL || "https://www.youtube.com/cityofmiamibeach",
+      sourceUrl: sourceUrl || process.env.CMB_DEFAULT_LIVE_URL || "https://www.youtube.com/c/CityofMiamiBeachTV/live",
       status: "idle",
       createdAt: now,
       updatedAt: now,

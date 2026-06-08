@@ -16,7 +16,7 @@ Set these in the Railway service variables:
 
 ```text
 ACCESS_TOKEN=<make-a-long-random-password>
-CMB_DEFAULT_LIVE_URL=https://www.youtube.com/cityofmiamibeach
+CMB_DEFAULT_LIVE_URL=https://www.youtube.com/c/CityofMiamiBeachTV/live
 ```
 
 Railway provides `PORT` automatically.

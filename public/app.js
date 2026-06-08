@@ -395,7 +395,7 @@ function staticSession() {
   return {
     id: "static-demo",
     title: "CMB Commission live room",
-    sourceUrl: "https://www.youtube.com/cityofmiamibeach",
+    sourceUrl: "https://www.youtube.com/c/CityofMiamiBeachTV/live",
     status: state.staticTimer ? "live" : "idle",
     transcript: state.transcript,
     alerts: state.alerts,
