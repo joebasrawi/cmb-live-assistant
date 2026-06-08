@@ -282,6 +282,8 @@ const elements = {
   sendLineBtn: document.querySelector("#sendLineBtn"),
   askText: document.querySelector("#askText"),
   askBtn: document.querySelector("#askBtn"),
+  askFile: document.querySelector("#askFile"),
+  attachedFileLabel: document.querySelector("#attachedFileLabel"),
   sourceUrl: document.querySelector("#sourceUrl"),
   answersList: document.querySelector("#answersList"),
   alertsList: document.querySelector("#alertsList"),
@@ -294,6 +296,10 @@ const elements = {
   noteCount: document.querySelector("#noteCount"),
   referenceCount: document.querySelector("#referenceCount"),
   recordCount: document.querySelector("#recordCount"),
+  dashboardMode: document.querySelector("#dashboardMode"),
+  dashboardAlertMetric: document.querySelector("#dashboardAlertMetric"),
+  dashboardTranscriptMetric: document.querySelector("#dashboardTranscriptMetric"),
+  dashboardMemoryMetric: document.querySelector("#dashboardMemoryMetric"),
   sourceModal: document.querySelector("#sourceModal"),
   sourceModalTitle: document.querySelector("#sourceModalTitle"),
   sourceModalBody: document.querySelector("#sourceModalBody"),
@@ -318,6 +324,7 @@ function indexSources(sources = []) {
 
 function setStatus(text, mode = "idle") {
   elements.statusText.textContent = text;
+  elements.dashboardMode.textContent = text;
   elements.statusDot.classList.toggle("live", mode === "live");
   elements.statusDot.classList.toggle("error", mode === "error");
 }
@@ -378,6 +385,7 @@ function renderSnapshot(session) {
   elements.sourceUrl.href = session.sourceUrl;
   elements.sourceUrl.textContent = session.sourceUrl;
   setStatus(session.status === "live" ? "Live" : "Idle", session.status === "live" ? "live" : "idle");
+  renderDashboardMetrics();
   renderAnswers();
   renderAlerts();
   renderTranscript();
@@ -387,6 +395,7 @@ function renderSnapshot(session) {
 
 function renderAlerts() {
   elements.alertCount.textContent = `${state.alerts.length} alert${state.alerts.length === 1 ? "" : "s"}`;
+  elements.dashboardAlertMetric.textContent = state.alerts.length;
   elements.alertsList.innerHTML = "";
   if (!state.alerts.length) {
     elements.alertsList.append(emptyState("Proactive alerts will appear here when the live discussion differs from prior records or needs a vote-time context check."));
@@ -423,26 +432,44 @@ function renderAnswers() {
   elements.answerCount.textContent = `${state.answers.length} answer${state.answers.length === 1 ? "" : "s"}`;
   elements.answersList.innerHTML = "";
   if (!state.answers.length) {
-    elements.answersList.append(emptyState("Ask about a person, topic, agenda item, vote, LTC, procurement path, fiscal impact, or possible inconsistency."));
+    elements.answersList.append(welcomeMessage());
     return;
   }
 
-  for (const answer of [...state.answers].reverse()) {
+  for (const answer of state.answers) {
     indexSources(answer.evidence);
     const item = document.createElement("article");
-    item.className = "answer-item";
+    item.className = "chat-exchange";
     item.innerHTML = `
-      <div class="answer-topline">
-        <span>${escapeHtml(answer.mode)}</span>
-        <span>${formatTime(answer.at)}</span>
+      <div class="chat-message user-message">
+        <div class="message-meta"><span>You</span><span>${formatTime(answer.at)}</span></div>
+        <p>${escapeHtml(answer.question)}</p>
       </div>
-      <h3>${escapeHtml(answer.question)}</h3>
-      <p>${escapeHtml(answer.answer)}</p>
-      <div class="recommendation">${escapeHtml(answer.recommendation)}</div>
-      <div class="evidence-list">${answer.evidence.map(renderEvidence).join("")}</div>
+      <div class="chat-message assistant-message">
+        <div class="message-meta"><span>${escapeHtml(answer.mode)}</span><span>Source-backed</span></div>
+        <p>${escapeHtml(answer.answer)}</p>
+        <div class="recommendation">${escapeHtml(answer.recommendation)}</div>
+        <div class="evidence-list">${answer.evidence.map(renderEvidence).join("")}</div>
+      </div>
     `;
     elements.answersList.append(item);
   }
+  elements.answersList.scrollTop = elements.answersList.scrollHeight;
+}
+
+function renderDashboardMetrics() {
+  elements.dashboardAlertMetric.textContent = state.alerts.length;
+  elements.dashboardTranscriptMetric.textContent = state.transcript.length;
+}
+
+function welcomeMessage() {
+  const node = document.createElement("div");
+  node.className = "welcome-message";
+  node.innerHTML = `
+    <strong>Ready for dais questions.</strong>
+    <p>Ask a plain-English question, attach a file, or use a quick prompt. Every answer will show the sources it relied on.</p>
+  `;
+  return node;
 }
 
 function renderEvidence(source) {
@@ -465,6 +492,7 @@ function renderEvidence(source) {
 
 function renderTranscript() {
   elements.transcriptCount.textContent = `${state.transcript.length} line${state.transcript.length === 1 ? "" : "s"}`;
+  elements.dashboardTranscriptMetric.textContent = state.transcript.length;
   elements.transcriptList.innerHTML = "";
   if (!state.transcript.length) {
     elements.transcriptList.append(emptyState("Transcript lines will appear here as the meeting audio is processed."));
@@ -595,6 +623,7 @@ async function loadSessions() {
     state.sessions = sessionsPayload.sessions;
     indexSources(recordsPayload.records);
     elements.recordCount.textContent = `${recordsPayload.records.length} prior record${recordsPayload.records.length === 1 ? "" : "s"}`;
+    elements.dashboardMemoryMetric.textContent = recordsPayload.records.length;
     renderSessions(sessionsPayload.defaultSessionId);
     connectEvents();
   } catch {
@@ -636,24 +665,59 @@ async function sendManualLine() {
 async function askStaffer() {
   const question = elements.askText.value.trim();
   if (!question) return;
+  const fileContext = await readAttachedFile();
+  const questionWithFile = fileContext ? `${question}\n\nAttached file context:\n${fileContext}` : question;
   let answer;
   if (!state.staticMode) {
     try {
       const payload = await api("/api/ask", {
         method: "POST",
-        body: JSON.stringify({ question })
+        body: JSON.stringify({ question: questionWithFile })
       });
       answer = payload.answer;
     } catch {
-      answer = answerQuestion(question);
+      answer = answerQuestion(questionWithFile);
     }
   } else {
-    answer = answerQuestion(question);
+    answer = answerQuestion(questionWithFile);
   }
+  answer.question = fileContext ? `${question} [attached: ${elements.askFile.files[0].name}]` : question;
   indexSources(answer.evidence);
   state.answers.push(answer);
   elements.askText.value = "";
+  clearAttachedFile();
   renderAnswers();
+}
+
+async function readAttachedFile() {
+  const file = elements.askFile.files?.[0];
+  if (!file) return "";
+  const label = `${file.name} (${Math.ceil(file.size / 1024)} KB)`;
+  if (file.size > 1024 * 1024) {
+    return `${label}. File is attached for handoff, but this public demo only previews files under 1 MB.`;
+  }
+  const textLike = /text|json|csv|markdown|html|xml/i.test(file.type) || /\.(txt|md|csv|json|html?|xml)$/i.test(file.name);
+  if (!textLike) {
+    return `${label}. File attached. Full extraction for this file type belongs in the production backend ingest pipeline.`;
+  }
+  const text = await file.text();
+  return `${label}\n${text.slice(0, 5000)}`;
+}
+
+function updateAttachedFile() {
+  const file = elements.askFile.files?.[0];
+  if (!file) {
+    elements.attachedFileLabel.hidden = true;
+    elements.attachedFileLabel.textContent = "";
+    return;
+  }
+  elements.attachedFileLabel.hidden = false;
+  elements.attachedFileLabel.textContent = `Attached: ${file.name}`;
+}
+
+function clearAttachedFile() {
+  elements.askFile.value = "";
+  updateAttachedFile();
 }
 
 function answerQuestion(question) {
@@ -661,12 +725,17 @@ function answerQuestion(question) {
   const person = detectPerson(question);
   const topic = detectTopic(question);
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(question);
+  const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(question);
 
   let answer = "I found related source records in the city memory seed. Treat this as a lead until the official meeting record is opened.";
   let recommendation = "Open the evidence cards, then verify the official agenda packet, LTC, resolution, ordinance, or archived video before using it on the dais.";
   let mode = "Source pull";
 
-  if (person && topic && asksInconsistency) {
+  if (asksLiveReadiness) {
+    mode = "Launch plan";
+    answer = "To make this fully live for the next commission meeting, the core work is archive ingestion, live audio transcription, speaker labeling, secure dais access, and a verification workflow that forces every alert to cite an official source.";
+    recommendation = "Start with the official meeting archive and MBTV feed: those unlock real-time transcript, source retrieval, and contradiction checks with confidence labels.";
+  } else if (person && topic && asksInconsistency) {
     mode = "Consistency check";
     answer = `${person} has related memory on ${topic}. The current demo memory can identify possible differences, but a final consistency call needs the official transcript or video timestamp.`;
     recommendation = `Ask staff to confirm ${person}'s prior ${topic} statements using the official source cards below.`;
@@ -680,7 +749,8 @@ function answerQuestion(question) {
     recommendation = "Open the city index most relevant to the question: agendas for meeting items, LTCs for staff updates, and resolutions/ordinances for adopted action.";
   }
 
-  const evidence = matches.length ? matches : OFFICIAL_SOURCES.slice(0, 4);
+  const readinessSources = OFFICIAL_SOURCES.filter((source) => ["official-meetings-agendas", "official-archived-meetings", "official-ltc", "official-resolutions-ordinances"].includes(source.id));
+  const evidence = asksLiveReadiness ? readinessSources : (matches.length ? matches : OFFICIAL_SOURCES.slice(0, 4));
   return {
     id: crypto.randomUUID(),
     at: new Date().toISOString(),
@@ -771,6 +841,7 @@ function detectTopic(text) {
     ["LTC", ["ltc", "letter to commission"]],
     ["legislation", ["resolution", "ordinance", "legislation"]],
     ["transportation", ["parking", "traffic", "mobility", "transit"]],
+    ["live readiness", ["fully live", "working live", "next commission meeting", "real time", "production", "launch"]],
     ["officials", ["mayor", "commissioner", "city manager", "city clerk"]]
   ];
   return rules.find(([, needles]) => needles.some((needle) => lower.includes(needle)))?.[0] || "";
@@ -781,6 +852,7 @@ function startStaticMode() {
   state.sessions = [staticSession()];
   state.currentSessionId = "static-demo";
   elements.recordCount.textContent = `${STATIC_RECORDS.length} demo prior records`;
+  elements.dashboardMemoryMetric.textContent = STATIC_RECORDS.length;
   renderSessions("static-demo");
   setStatus("Demo", "idle");
   renderSnapshot(staticSession());
@@ -967,7 +1039,16 @@ elements.stopBtn.addEventListener("click", stopSession);
 elements.sendLineBtn.addEventListener("click", sendManualLine);
 elements.askBtn.addEventListener("click", askStaffer);
 elements.askText.addEventListener("keydown", (event) => {
-  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") askStaffer();
+  if (event.key !== "Enter" || event.shiftKey) return;
+  event.preventDefault();
+  askStaffer();
+});
+elements.askFile.addEventListener("change", updateAttachedFile);
+document.querySelectorAll(".prompt-chip").forEach((button) => {
+  button.addEventListener("click", () => {
+    elements.askText.value = button.dataset.prompt || "";
+    elements.askText.focus();
+  });
 });
 elements.daisModeBtn.addEventListener("click", () => setDaisMode(!state.daisMode));
 elements.sessionSelect.addEventListener("change", () => {

@@ -21,6 +21,7 @@ const TOPIC_RULES = [
   ["LTC", ["ltc", "letter to commission"]],
   ["legislation", ["resolution", "ordinance", "legislation"]],
   ["transportation", ["parking", "traffic", "mobility", "transit"]],
+  ["live readiness", ["fully live", "working live", "next commission meeting", "real time", "production", "launch"]],
   ["officials", ["mayor", "commissioner", "city manager", "city clerk"]]
 ];
 
@@ -74,6 +75,7 @@ export function answerQuestion({ memoryStore, question }) {
   const person = people[0] || "";
   const topic = detectTopic(query);
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(query);
+  const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(query);
   const targetedQuery = [query, person, topic].filter(Boolean).join(" ");
 
   const records = memoryStore.searchRecords(targetedQuery, {
@@ -87,7 +89,11 @@ export function answerQuestion({ memoryStore, question }) {
   let answer = "I found related source records in memory. Treat this as a lead until the official meeting record is opened.";
   let recommendation = "Open the evidence cards, then verify the official agenda packet, LTC, resolution, ordinance, or archived video before using it on the dais.";
 
-  if (person && topic && asksInconsistency) {
+  if (asksLiveReadiness) {
+    mode = "Launch plan";
+    answer = "To make this fully live for the next commission meeting, the core work is archive ingestion, live audio transcription, speaker labeling, secure dais access, and a verification workflow that forces every alert to cite an official source.";
+    recommendation = "Start with the official meeting archive and MBTV feed: those unlock real-time transcript, source retrieval, and contradiction checks with confidence labels.";
+  } else if (person && topic && asksInconsistency) {
     mode = "Consistency check";
     answer = `${person} has related memory on ${topic}. This can flag possible differences immediately, but a final consistency call needs the official transcript or video timestamp.`;
     recommendation = `Ask staff to confirm ${person}'s prior ${topic} statements using the source cards below.`;

@@ -11,8 +11,8 @@
       <header class="topbar">
         <div class="brand-block">
           <p class="eyebrow">City of Miami Beach</p>
-          <h1>Commission Staffer</h1>
-          <p class="subhead">Live fact-checking, source pulls, and askable memory for the dais.</p>
+          <h1>Dais Intelligence</h1>
+          <p class="subhead">Live briefing dashboard for questions, alerts, transcripts, and source-backed record checks.</p>
         </div>
         <div class="topbar-actions">
           <button id="daisModeBtn" class="secondary">Dais Mode</button>
@@ -46,12 +46,6 @@
           </label>
           <button id="sendLineBtn" class="wide">Send Line</button>
 
-          <label class="field ask-field">
-            <span>Ask the staffer</span>
-            <textarea id="askText" rows="5" placeholder="Ask: Did Commissioner Suarez say something different about procurement before?"></textarea>
-          </label>
-          <button id="askBtn" class="wide secondary">Ask</button>
-
           <div class="room-facts">
             <div>
               <span>Memory</span>
@@ -65,14 +59,49 @@
         </aside>
 
         <section class="briefing-panel">
-          <div class="panel-header">
-            <div>
-              <h2>Ask the Staffer</h2>
-              <p class="panel-kicker">Ask a live question and get source-backed context.</p>
+          <section class="metric-grid" aria-label="Live dashboard status">
+            <div class="metric-tile">
+              <span>Mode</span>
+              <strong id="dashboardMode">Demo</strong>
             </div>
-            <span id="answerCount" class="counter">0 answers</span>
-          </div>
-          <div id="answersList" class="answer-list"></div>
+            <div class="metric-tile">
+              <span>Alerts</span>
+              <strong id="dashboardAlertMetric">0</strong>
+            </div>
+            <div class="metric-tile">
+              <span>Transcript</span>
+              <strong id="dashboardTranscriptMetric">0</strong>
+            </div>
+            <div class="metric-tile accent">
+              <span>Memory</span>
+              <strong id="dashboardMemoryMetric">0</strong>
+            </div>
+          </section>
+
+          <section class="chat-panel">
+            <div class="panel-header chat-header">
+              <div>
+                <h2>Ask the Staffer</h2>
+                <p class="panel-kicker">A live source-backed chat for the dais.</p>
+              </div>
+              <span id="answerCount" class="counter">0 answers</span>
+            </div>
+            <div id="answersList" class="chat-thread" aria-live="polite"></div>
+            <div id="attachedFileLabel" class="attached-file" hidden></div>
+            <div class="chat-composer">
+              <label class="attach-button" title="Attach file">
+                <input id="askFile" type="file" accept=".txt,.md,.csv,.json,.html,.htm,.pdf,.doc,.docx">
+                Attach
+              </label>
+              <textarea id="askText" rows="2" placeholder="Ask anything about the live item, a commissioner, an LTC, a vote, a file, or a prior statement."></textarea>
+              <button id="askBtn">Send</button>
+            </div>
+            <div class="prompt-row" aria-label="Quick questions">
+              <button class="prompt-chip" data-prompt="Is this inconsistent with anything said before?">Inconsistency</button>
+              <button class="prompt-chip" data-prompt="Pull the best source for this item.">Best source</button>
+              <button class="prompt-chip" data-prompt="What should the commissioner ask before voting?">Vote check</button>
+            </div>
+          </section>
 
           <div class="panel-header">
             <div>
@@ -91,6 +120,17 @@
         </section>
 
         <aside class="context-panel">
+          <div class="live-plan">
+            <p class="eyebrow">Next Live Meeting</p>
+            <h2>Production Readiness</h2>
+            <div class="readiness-list">
+              <div><span>1</span><strong>Archive ingest</strong><p>Index meetings, agendas, LTCs, ordinances, resolutions, and video timestamps from 2023 forward.</p></div>
+              <div><span>2</span><strong>Live audio feed</strong><p>Connect MBTV or room audio to transcription with speaker labeling.</p></div>
+              <div><span>3</span><strong>Secure dais access</strong><p>Add login, commissioner profiles, audit logs, and private deployment.</p></div>
+              <div><span>4</span><strong>Source verification</strong><p>Require citations, confidence labels, and one-click official records before any recommendation.</p></div>
+            </div>
+          </div>
+
           <div class="panel-header">
             <h2>Source Brief</h2>
             <span id="noteCount" class="counter">0 notes</span>
