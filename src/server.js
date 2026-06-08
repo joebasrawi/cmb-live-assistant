@@ -180,6 +180,14 @@ const server = http.createServer(async (request, response) => {
   }
 });
 
-server.listen(port, () => {
+server.listen(port, "0.0.0.0", () => {
   console.log(`CMB Live Assistant running at http://localhost:${port}`);
 });
+
+function shutdown(signal) {
+  console.log(`${signal} received, closing server`);
+  server.close(() => process.exit(0));
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
