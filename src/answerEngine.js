@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { tokenize } from "./memoryStore.js";
-import { hasUsableOpenAiKey } from "./openaiConfig.js";
+import { hasUsableOpenAiKey, openAiApiKey } from "./openaiConfig.js";
 
 const PEOPLE = [
   "Steven Meiner",
@@ -87,7 +87,7 @@ async function askOpenAI({ question, mode, recommendation, evidence }) {
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      Authorization: `Bearer ${openAiApiKey()}`,
       "Content-Type": "application/json"
     },
     body: JSON.stringify({

@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { spawn, spawnSync } from "node:child_process";
-import { hasUsableOpenAiKey } from "./openaiConfig.js";
+import { hasUsableOpenAiKey, openAiApiKey } from "./openaiConfig.js";
 
 const DEFAULT_CHUNK_SECONDS = Number(process.env.TRANSCRIPT_CHUNK_SECONDS || 18);
 const OPENAI_TRANSCRIBE_MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
@@ -231,7 +231,7 @@ export class LiveTranscriptionService {
     const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
+        Authorization: `Bearer ${openAiApiKey()}`
       },
       body: form
     });
