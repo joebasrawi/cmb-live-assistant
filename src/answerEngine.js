@@ -88,7 +88,7 @@ function officialLookupFilter(query) {
   if (/\bcity manager\b/.test(text)) return (record) => /city manager/i.test(`${record.title || ""} ${record.role || ""}`);
   if (/\bcity clerk\b/.test(text)) return (record) => /city clerk/i.test(`${record.title || ""} ${record.role || ""}`);
   if (/\bmayor\b/.test(text)) return (record) => /mayor/i.test(`${record.title || ""} ${record.role || ""}`);
-  if (/\bcommissioners?\b/.test(text)) return (record) => /commissioner/i.test(`${record.title || ""} ${record.role || ""}`);
+  if (/\bcommissioners\b|\bcommission roster\b|\bcommission list\b/.test(text)) return (record) => /commissioner/i.test(`${record.title || ""} ${record.role || ""}`);
   return null;
 }
 
@@ -147,7 +147,7 @@ export async function answerQuestion({ memoryStore, question }) {
   const topic = detectTopic(query);
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(query);
   const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(query);
-  const asksOfficialLookup = /\bwho\b|\bofficial roster\b|\blisted by the city\b|\bcity manager\b|\bcity clerk\b|\bmayor\b|\bcommissioners?\b/i.test(query);
+  const asksOfficialLookup = /\bwho\b|\bofficial roster\b|\blisted by the city\b|\bcity manager\b|\bcity clerk\b|\bmayor\b|\bcommissioners\b|\bcommission roster\b|\bcommission list\b/i.test(query);
   const targetedQuery = [query, person, topic].filter(Boolean).join(" ");
 
   let records = memoryStore.searchRecords(targetedQuery, {
