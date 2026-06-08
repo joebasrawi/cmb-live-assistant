@@ -69,7 +69,8 @@ function compactEvidence(record) {
     claim: record.claim,
     evidence: record.evidence,
     sourceUrl: record.sourceUrl,
-    timestamp: record.timestamp
+    timestamp: record.timestamp,
+    sourceId: record.sourceId
   };
 }
 
@@ -148,9 +149,9 @@ export class ProactiveWatcher {
         type: "possible-contradiction",
         priority: "high",
         at: segment.at,
-        title: `Possible inconsistency on ${topic}`,
+        title: `Possible inconsistency: ${segment.speaker} / ${topic}`,
         body: `The live statement sounds like ${current.label}, but prior records in memory point the other way.`,
-        recommendation: "Use this as a source-backed prompt: ask staff to confirm the prior record before relying on the live statement.",
+        recommendation: "Open the source card, then ask staff to confirm the prior record before relying on the live statement.",
         triggerText: segment.text,
         evidence
       });

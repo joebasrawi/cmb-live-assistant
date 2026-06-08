@@ -4,11 +4,11 @@ import { randomUUID } from "node:crypto";
 import { detectReferences } from "./referenceDetector.js";
 
 const DEMO_LINES = [
-  { speaker: "Mayor", text: "We are now moving to R7B. Can staff remind us what the prior LTC said about Ocean Drive operations?" },
-  { speaker: "Commissioner", text: "I have always opposed Ocean Drive restrictions, and I do not think this has ever come before us." },
-  { speaker: "City Manager", text: "This has no fiscal impact and should not require a budget amendment." },
-  { speaker: "Commissioner", text: "Before we vote, I do not believe this was tied to an RFP or any procurement process." },
-  { speaker: "City Attorney", text: "The ordinance language is separate from the resolution before you today." },
+  { speaker: "Mayor Steven Meiner", text: "We are now moving to R7B. Can staff remind us what the prior LTC said about Ocean Drive operations?" },
+  { speaker: "Commissioner Tanya K. Bhatt", text: "I have always opposed Ocean Drive restrictions, and I do not think this has ever come before us." },
+  { speaker: "City Manager Eric Carpenter", text: "This has no fiscal impact and should not require a budget amendment." },
+  { speaker: "Commissioner David Suarez", text: "Before we vote, I do not believe this was tied to an RFP or any procurement process." },
+  { speaker: "City Attorney Ricardo J. Dopico", text: "The ordinance language is separate from the resolution before you today." },
   { speaker: "Public Speaker", text: "Please also consider the traffic and parking impacts on residents." }
 ];
 

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { MemoryStore } from "./memoryStore.js";
 import { LiveAssistant } from "./liveAssistant.js";
 import { ProactiveWatcher } from "./proactiveWatcher.js";
+import { answerQuestion } from "./answerEngine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -106,6 +107,12 @@ async function handleApi(request, response, url) {
     const q = url.searchParams.get("q") || "";
     const topic = url.searchParams.get("topic") || undefined;
     return sendJson(response, 200, { q, results: memoryStore.searchRecords(q, { topic, limit: 20 }) });
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/ask") {
+    const body = await readJson(request);
+    const answer = answerQuestion({ memoryStore, question: body.question });
+    return sendJson(response, 200, { answer });
   }
 
   if (request.method === "GET" && url.pathname === "/api/sessions") {

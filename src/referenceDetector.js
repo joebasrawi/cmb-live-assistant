@@ -15,6 +15,19 @@ const RECORD_RULES = [
   { type: "agenda-item", pattern: /\b(?:R|C|NB|PA|PH|SM)\d{1,2}[A-Z]?\b/gi }
 ];
 
+const PEOPLE = [
+  "Steven Meiner",
+  "Monica Matteo-Salinas",
+  "Laura Dominguez",
+  "Alex Fernandez",
+  "Tanya K. Bhatt",
+  "David Suarez",
+  "Joseph Magazine",
+  "Eric Carpenter",
+  "Rafael E. Granado",
+  "Jason Greene"
+];
+
 function uniqueReferences(references) {
   const seen = new Set();
   const result = [];
@@ -47,6 +60,18 @@ export function detectReferences(text) {
         type: "topic",
         value: rule.topic,
         confidence: "medium"
+      });
+    }
+  }
+
+  const lower = text.toLowerCase();
+  for (const person of PEOPLE) {
+    const variants = [person, person.replace("K. ", ""), person.split(" ").at(-1)].map((item) => item.toLowerCase());
+    if (variants.some((variant) => variant && lower.includes(variant))) {
+      references.push({
+        type: "person",
+        value: person,
+        confidence: "high"
       });
     }
   }

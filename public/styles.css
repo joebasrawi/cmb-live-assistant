@@ -268,6 +268,7 @@ a {
 }
 
 .alert-list,
+.answer-list,
 .transcript-list,
 .notes-list,
 .reference-list {
@@ -288,6 +289,7 @@ a {
 }
 
 .alert-item,
+.answer-item,
 .transcript-line,
 .note-item,
 .reference-item {
@@ -300,6 +302,11 @@ a {
 .alert-item {
   box-shadow: var(--shadow);
   border-left: 6px solid var(--gold);
+}
+
+.answer-item {
+  border-left: 5px solid var(--blue);
+  box-shadow: 0 10px 28px rgba(17, 24, 39, 0.08);
 }
 
 .alert-item.priority-high {
@@ -318,6 +325,7 @@ a {
 }
 
 .alert-topline,
+.answer-topline,
 .line-meta,
 .note-meta {
   display: flex;
@@ -325,6 +333,15 @@ a {
   gap: 12px;
   color: var(--muted);
   font-size: 12px;
+}
+
+.answer-topline span:first-child {
+  border: 1px solid rgba(31, 111, 145, 0.24);
+  border-radius: 999px;
+  background: #eef7fa;
+  color: var(--blue-dark);
+  padding: 3px 8px;
+  font-weight: 700;
 }
 
 .priority-pill,
@@ -384,6 +401,39 @@ a {
   font-size: 13px;
 }
 
+.source-button,
+.source-chip {
+  min-height: auto;
+  height: auto;
+  border-color: rgba(31, 111, 145, 0.22);
+  background: #ffffff;
+  color: var(--blue-dark);
+  text-align: left;
+  line-height: 1.25;
+}
+
+.source-button {
+  width: 100%;
+  padding: 8px 10px;
+  font-weight: 700;
+}
+
+.source-button:hover,
+.source-chip:hover {
+  border-color: var(--blue);
+  background: #eef7fa;
+}
+
+.source-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin: 3px 5px 3px 0;
+  padding: 6px 9px;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+}
+
 .transcript-line {
   display: grid;
   gap: 6px;
@@ -418,6 +468,7 @@ a {
 
 .source-link {
   display: block;
+  margin-top: 6px;
   color: var(--blue);
   font-size: 13px;
   overflow-wrap: anywhere;
@@ -448,6 +499,92 @@ body.dais-mode .alert-item {
   font-size: 17px;
 }
 
+body.modal-open {
+  overflow: hidden;
+}
+
+.source-modal[hidden] {
+  display: none;
+}
+
+.source-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.source-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.44);
+}
+
+.source-modal-panel {
+  position: relative;
+  width: min(720px, 100%);
+  max-height: min(720px, calc(100vh - 36px));
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.source-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.source-modal-body {
+  padding: 18px;
+}
+
+.source-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.source-detail-grid div {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 10px;
+  background: var(--surface-soft);
+}
+
+.source-detail-grid span,
+.timestamp-note {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.source-claim {
+  line-height: 1.5;
+}
+
+.source-official {
+  border-left: 4px solid var(--green);
+  background: var(--green-soft);
+  padding: 12px;
+  line-height: 1.4;
+}
+
+.modal-source-link {
+  display: inline-flex;
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+}
+
 @media (max-width: 1080px) {
   .workspace,
   body.dais-mode .workspace {
@@ -474,5 +611,9 @@ body.dais-mode .alert-item {
 
   h1 {
     font-size: 24px;
+  }
+
+  .source-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

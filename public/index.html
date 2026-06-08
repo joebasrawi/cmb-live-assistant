@@ -11,8 +11,8 @@
       <header class="topbar">
         <div class="brand-block">
           <p class="eyebrow">City of Miami Beach</p>
-          <h1>Commission Briefing Room</h1>
-          <p class="subhead">Live transcript, prior-record alerts, and source cards for the dais.</p>
+          <h1>Commission Staffer</h1>
+          <p class="subhead">Live fact-checking, source pulls, and askable memory for the dais.</p>
         </div>
         <div class="topbar-actions">
           <button id="daisModeBtn" class="secondary">Dais Mode</button>
@@ -26,7 +26,7 @@
       <section class="workspace">
         <aside class="control-panel">
           <div class="panel-header">
-            <h2>Room Controls</h2>
+            <h2>Dais Console</h2>
             <button id="refreshBtn" class="secondary compact-button" title="Refresh room" aria-label="Refresh room">Refresh</button>
           </div>
 
@@ -41,10 +41,16 @@
           </div>
 
           <label class="field">
-            <span>Manual transcript</span>
+            <span>Live input</span>
             <textarea id="manualText" rows="6" placeholder="Paste a live line, e.g. I have always opposed Ocean Drive restrictions, and this has never come before us."></textarea>
           </label>
           <button id="sendLineBtn" class="wide">Send Line</button>
+
+          <label class="field ask-field">
+            <span>Ask the staffer</span>
+            <textarea id="askText" rows="5" placeholder="Ask: Did Commissioner Suarez say something different about procurement before?"></textarea>
+          </label>
+          <button id="askBtn" class="wide secondary">Ask</button>
 
           <div class="room-facts">
             <div>
@@ -59,6 +65,15 @@
         </aside>
 
         <section class="briefing-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Ask the Staffer</h2>
+              <p class="panel-kicker">Ask a live question and get source-backed context.</p>
+            </div>
+            <span id="answerCount" class="counter">0 answers</span>
+          </div>
+          <div id="answersList" class="answer-list"></div>
+
           <div class="panel-header">
             <div>
               <h2>Priority Alerts</h2>
@@ -90,6 +105,19 @@
         </aside>
       </section>
     </main>
+    <div id="sourceModal" class="source-modal" hidden>
+      <div class="source-modal-backdrop" data-close-source></div>
+      <section class="source-modal-panel" role="dialog" aria-modal="true" aria-labelledby="sourceModalTitle">
+        <div class="source-modal-header">
+          <div>
+            <p class="eyebrow">Source Detail</p>
+            <h2 id="sourceModalTitle">Source</h2>
+          </div>
+          <button id="closeSourceBtn" class="secondary compact-button">Close</button>
+        </div>
+        <div id="sourceModalBody" class="source-modal-body"></div>
+      </section>
+    </div>
     <script type="module" src="app.js"></script>
   </body>
 </html>
