@@ -54,6 +54,12 @@ In the Codex desktop environment, use the bundled Node runtime if the regular `n
 
 ## Public Demo
 
+Phone-visible demo:
+
+```text
+https://joebasrawi.github.io/cmb-live-assistant/
+```
+
 The `public/` folder is deployable to GitHub Pages. In the public demo, the app falls back to static mode when the API is unavailable, so phone viewers can start the demo and see proactive alerts without a backend.
 
 ## Proactive Watcher
