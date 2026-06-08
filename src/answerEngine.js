@@ -27,6 +27,14 @@ const TOPIC_RULES = [
 ];
 
 const OPENAI_ANSWER_MODEL = process.env.OPENAI_ANSWER_MODEL || "gpt-4.1-mini";
+const VOTE_PREP_DOCUMENT_IDS = [
+  "cmb-official-meetings-agendas",
+  "cmb-ltc-index",
+  "cmb-resolutions-ordinances",
+  "reference-pattern-records",
+  "cmb-city-clerk",
+  "cmb-archived-meetings"
+];
 
 function detectPeople(text) {
   const lower = text.toLowerCase();
@@ -92,6 +100,11 @@ function officialLookupFilter(query) {
   return null;
 }
 
+function getVotePrepDocuments(memoryStore) {
+  const byId = new Map((memoryStore.documents || []).map((document) => [document.id, document]));
+  return VOTE_PREP_DOCUMENT_IDS.map((id) => byId.get(id)).filter(Boolean);
+}
+
 
 async function askOpenAI({ question, mode, recommendation, evidence }) {
   if (!hasUsableOpenAiKey() || !evidence.length) return null;
@@ -148,6 +161,8 @@ export async function answerQuestion({ memoryStore, question }) {
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(query);
   const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(query);
   const asksOfficialLookup = /\bwho\b|\bofficial roster\b|\blisted by the city\b|\bcity manager\b|\bcity clerk\b|\bmayor\b|\bcommissioners\b|\bcommission roster\b|\bcommission list\b/i.test(query);
+  const asksVotePrep = /before (?:we )?(?:vote|voting)|motion|fiscal impact|budget amendment|procurement|rfp|rfq|contract/i.test(query)
+    && /ask|check|confirm|before|voting|vote/i.test(query);
   const targetedQuery = [query, person, topic].filter(Boolean).join(" ");
 
   let records = memoryStore.searchRecords(targetedQuery, {
@@ -161,6 +176,9 @@ export async function answerQuestion({ memoryStore, question }) {
     const filteredRecords = records.filter(officialFilter);
     if (filteredRecords.length) records = filteredRecords;
   }
+  const votePrepDocuments = asksVotePrep
+    ? getVotePrepDocuments(memoryStore)
+    : [];
 
   let mode = "Source pull";
   let answer = "I found related source records in memory. Treat this as a lead until the official meeting record is opened.";
@@ -174,6 +192,10 @@ export async function answerQuestion({ memoryStore, question }) {
     mode = "Official lookup";
     answer = "I found the official city roster/source record. Use the source card below as the authority for the name and role.";
     recommendation = "Open the official roster or city department page before quoting the name or title.";
+  } else if (asksVotePrep) {
+    mode = "Vote prep";
+    answer = "Before a vote, check the official agenda item, fiscal impact, procurement path, legal form, sponsor, prior action, and any LTC or adopted resolution history.";
+    recommendation = "Open the source cards, confirm the current agenda packet, then ask staff to state fiscal impact, procurement authority, legal sufficiency, and implementation timeline on the record.";
   } else if (person && topic && asksInconsistency) {
     mode = "Consistency check";
     answer = `${person} has related memory on ${topic}. This can flag possible differences immediately, but a final consistency call needs the official transcript or video timestamp.`;
@@ -189,7 +211,14 @@ export async function answerQuestion({ memoryStore, question }) {
   }
 
   const evidenceMap = new Map();
-  for (const record of records.map(compactRecord)) evidenceMap.set(record.id, record);
+  if (asksVotePrep) {
+    for (const document of votePrepDocuments.map(compactDocument)) evidenceMap.set(document.id, document);
+    for (const record of records.filter((record) => !String(record.id || "").startsWith("demo-")).map(compactRecord)) {
+      evidenceMap.set(record.id, record);
+    }
+  } else {
+    for (const record of records.map(compactRecord)) evidenceMap.set(record.id, record);
+  }
   for (const document of documents.map(compactDocument)) evidenceMap.set(document.id, document);
 
   const answerPayload = {
