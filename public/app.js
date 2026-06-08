@@ -729,6 +729,7 @@ function hideAuthGate() {
   elements.authGate.hidden = true;
   elements.authError.hidden = true;
   elements.authError.textContent = "";
+  setStatus("Connecting", "idle");
 }
 
 async function submitAccessToken() {
