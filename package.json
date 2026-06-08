@@ -1,0 +1,13 @@
+{
+  "name": "cmb-live-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Live City of Miami Beach commission meeting assistant prototype.",
+  "scripts": {
+    "start": "node src/server.js",
+    "start:static": "node scripts/static-server.js",
+    "check": "node scripts/check-env.js",
+    "import-records": "node scripts/import-records.js"
+  }
+}

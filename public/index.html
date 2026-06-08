@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>CMB Live Assistant</title>
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand-block">
+          <p class="eyebrow">City of Miami Beach</p>
+          <h1>Commission Briefing Room</h1>
+          <p class="subhead">Live transcript, prior-record alerts, and source cards for the dais.</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="daisModeBtn" class="secondary">Dais Mode</button>
+          <div class="status-strip">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Connecting</span>
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="control-panel">
+          <div class="panel-header">
+            <h2>Room Controls</h2>
+            <button id="refreshBtn" class="secondary compact-button" title="Refresh room" aria-label="Refresh room">Refresh</button>
+          </div>
+
+          <label class="field">
+            <span>Session</span>
+            <select id="sessionSelect"></select>
+          </label>
+
+          <div class="button-row">
+            <button id="startDemoBtn">Start Demo</button>
+            <button id="stopBtn" class="secondary">Stop</button>
+          </div>
+
+          <label class="field">
+            <span>Manual transcript</span>
+            <textarea id="manualText" rows="6" placeholder="Paste a live line, e.g. I have always opposed Ocean Drive restrictions, and this has never come before us."></textarea>
+          </label>
+          <button id="sendLineBtn" class="wide">Send Line</button>
+
+          <div class="room-facts">
+            <div>
+              <span>Memory</span>
+              <strong id="recordCount">0 prior records</strong>
+            </div>
+            <div>
+              <span>Source</span>
+              <a id="sourceUrl" href="https://www.youtube.com/cityofmiamibeach" target="_blank" rel="noreferrer">Official live channel</a>
+            </div>
+          </div>
+        </aside>
+
+        <section class="briefing-panel">
+          <div class="panel-header">
+            <div>
+              <h2>Priority Alerts</h2>
+              <p class="panel-kicker">Automatic catches from prior meeting memory.</p>
+            </div>
+            <span id="alertCount" class="counter">0 alerts</span>
+          </div>
+          <div id="alertsList" class="alert-list" aria-live="polite"></div>
+
+          <div class="panel-header transcript-header">
+            <h2>Live Transcript</h2>
+            <span id="transcriptCount" class="counter">0 lines</span>
+          </div>
+          <div id="transcriptList" class="transcript-list" aria-live="polite"></div>
+        </section>
+
+        <aside class="context-panel">
+          <div class="panel-header">
+            <h2>Source Brief</h2>
+            <span id="noteCount" class="counter">0 notes</span>
+          </div>
+          <div id="notesList" class="notes-list"></div>
+
+          <div class="panel-header reference-header">
+            <h2>Detected References</h2>
+            <span id="referenceCount" class="counter">0 refs</span>
+          </div>
+          <div id="referenceList" class="reference-list"></div>
+        </aside>
+      </section>
+    </main>
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
