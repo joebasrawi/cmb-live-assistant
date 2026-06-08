@@ -8,6 +8,9 @@ const state = {
   references: [],
   answers: [],
   sourceIndex: new Map(),
+  archiveLoaded: false,
+  archiveSummary: null,
+  totalRecordCount: 0,
   daisMode: localStorage.getItem("cmb-dais-mode") === "true",
   staticMode: false,
   staticTimer: null
@@ -43,6 +46,20 @@ const OFFICIAL_SOURCES = [
     claim: "This is the first official source for current and past agendas, minutes, agenda packets, and video records."
   },
   {
+    id: "official-primegov",
+    title: "PrimeGov public meeting portal",
+    kind: "official-agenda-system",
+    sourceUrl: "https://miamibeachfl.primegov.com/public/portal",
+    claim: "PrimeGov is the city's current public portal for upcoming and archived meeting agendas, minutes, packets, and meeting video links."
+  },
+  {
+    id: "official-weblink",
+    title: "City Clerk Laserfiche/WebLink archive",
+    kind: "official-record-system",
+    sourceUrl: "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=120704&dbid=0&repo=CityClerk",
+    claim: "Laserfiche/WebLink is the City Clerk document archive for ordinances, resolutions, Letters to Commission, video link records, and related official files."
+  },
+  {
     id: "official-archived-meetings",
     title: "Official MBTV archived meetings",
     kind: "official-video-source",
@@ -53,14 +70,14 @@ const OFFICIAL_SOURCES = [
     id: "official-ltc",
     title: "Letters to Commission (LTC)",
     kind: "official-record-index",
-    sourceUrl: "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=261613&dbid=0&repo=CityClerk",
+    sourceUrl: "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=131458&dbid=0&repo=CityClerk",
     claim: "The City Clerk page links to Letters to Commission. LTCs are a key source for staff updates, policy implementation notes, and follow-up items."
   },
   {
     id: "official-resolutions-ordinances",
     title: "Resolutions and Ordinances",
     kind: "official-record-index",
-    sourceUrl: "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=2&dbid=0&repo=CityClerk",
+    sourceUrl: "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=120704&dbid=0&repo=CityClerk",
     claim: "The City Clerk page links to resolutions and ordinances. Use this for adopted legislative record checks."
   }
 ];
@@ -300,6 +317,7 @@ const elements = {
   dashboardAlertMetric: document.querySelector("#dashboardAlertMetric"),
   dashboardTranscriptMetric: document.querySelector("#dashboardTranscriptMetric"),
   dashboardMemoryMetric: document.querySelector("#dashboardMemoryMetric"),
+  nextMeetingLine: document.querySelector("#nextMeetingLine"),
   sourceModal: document.querySelector("#sourceModal"),
   sourceModalTitle: document.querySelector("#sourceModalTitle"),
   sourceModalBody: document.querySelector("#sourceModalBody"),
@@ -460,6 +478,30 @@ function renderAnswers() {
 function renderDashboardMetrics() {
   elements.dashboardAlertMetric.textContent = state.alerts.length;
   elements.dashboardTranscriptMetric.textContent = state.transcript.length;
+  elements.dashboardMemoryMetric.textContent = state.totalRecordCount || STATIC_RECORDS.length;
+}
+
+function updateNextMeetingLine(records = STATIC_RECORDS) {
+  const today = new Date(new Date().toDateString());
+  const next = records
+    .filter((record) => record.recordType === "primegov-upcoming-meeting")
+    .filter((record) => record.committeeId === 2 || /commission/i.test(`${record.title} ${record.topic}`))
+    .map((record) => ({ ...record, dateValue: new Date(`${record.meetingDate}T00:00:00`) }))
+    .filter((record) => !Number.isNaN(record.dateValue.valueOf()) && record.dateValue >= today)
+    .sort((a, b) => a.dateValue - b.dateValue)[0];
+  elements.nextMeetingLine.textContent = next
+    ? `${next.meetingTitle || next.title} is listed for ${formatMeetingDate(next.meetingDate)}.`
+    : "No upcoming City Commission meeting found in the published index yet.";
+}
+
+function formatMeetingDate(value) {
+  if (!value) return "the next listed date";
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(new Date(`${value}T12:00:00`));
 }
 
 function welcomeMessage() {
@@ -622,12 +664,55 @@ async function loadSessions() {
     state.staticMode = false;
     state.sessions = sessionsPayload.sessions;
     indexSources(recordsPayload.records);
-    elements.recordCount.textContent = `${recordsPayload.records.length} prior record${recordsPayload.records.length === 1 ? "" : "s"}`;
-    elements.dashboardMemoryMetric.textContent = recordsPayload.records.length;
+    const recordCount = recordsPayload.totalRecordCount || recordsPayload.records.length;
+    state.totalRecordCount = recordCount;
+    elements.recordCount.textContent = `${recordCount} prior record${recordCount === 1 ? "" : "s"}`;
+    elements.dashboardMemoryMetric.textContent = recordCount;
+    updateNextMeetingLine(recordsPayload.records);
     renderSessions(sessionsPayload.defaultSessionId);
     connectEvents();
   } catch {
     startStaticMode();
+  }
+}
+
+async function loadPublicArchiveRecords() {
+  if (state.archiveLoaded) return;
+  state.archiveLoaded = true;
+  try {
+    const [recordsResponse, summaryResponse] = await Promise.all([
+      fetch("data/official-archive-records.jsonl", { cache: "no-store" }),
+      fetch("data/official-archive-summary.json", { cache: "no-store" })
+    ]);
+    if (!recordsResponse.ok) throw new Error("Archive index is not published yet.");
+    const jsonl = await recordsResponse.text();
+    const records = jsonl
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line) => JSON.parse(line));
+    const existingIds = new Set(STATIC_RECORDS.map((record) => record.id));
+    for (const record of records) {
+      if (!existingIds.has(record.id)) {
+        STATIC_RECORDS.push(record);
+        existingIds.add(record.id);
+      }
+    }
+    if (summaryResponse.ok) state.archiveSummary = await summaryResponse.json();
+    indexSources(records);
+  } catch (error) {
+    console.info(error.message);
+  } finally {
+    const label = state.archiveSummary
+      ? `${STATIC_RECORDS.length} records, ${state.archiveSummary.fromYear}+ archive`
+      : `${STATIC_RECORDS.length} demo prior records`;
+    state.totalRecordCount = STATIC_RECORDS.length;
+    elements.recordCount.textContent = label;
+    elements.dashboardMemoryMetric.textContent = STATIC_RECORDS.length;
+    updateNextMeetingLine();
+    renderAnswers();
+    renderNotes();
+    renderReferences();
   }
 }
 
@@ -727,7 +812,9 @@ function answerQuestion(question) {
   const asksInconsistency = /inconsistent|contradict|different|before|previous|prior|said/i.test(question);
   const asksLiveReadiness = /fully live|working live|next commission meeting|live meeting|real time|production|launch/i.test(question);
 
-  let answer = "I found related source records in the city memory seed. Treat this as a lead until the official meeting record is opened.";
+  let answer = state.archiveSummary
+    ? `I searched ${state.archiveSummary.recordCount} indexed official records from ${state.archiveSummary.fromYear} forward. Treat matches as leads until the source card is opened.`
+    : "I found related source records in the city memory seed. Treat this as a lead until the official meeting record is opened.";
   let recommendation = "Open the evidence cards, then verify the official agenda packet, LTC, resolution, ordinance, or archived video before using it on the dais.";
   let mode = "Source pull";
 
@@ -851,11 +938,14 @@ function startStaticMode() {
   state.staticMode = true;
   state.sessions = [staticSession()];
   state.currentSessionId = "static-demo";
+  state.totalRecordCount = STATIC_RECORDS.length;
   elements.recordCount.textContent = `${STATIC_RECORDS.length} demo prior records`;
   elements.dashboardMemoryMetric.textContent = STATIC_RECORDS.length;
   renderSessions("static-demo");
   setStatus("Demo", "idle");
   renderSnapshot(staticSession());
+  updateNextMeetingLine();
+  loadPublicArchiveRecords();
 }
 
 function startStaticDemo() {

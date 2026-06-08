@@ -54,6 +54,7 @@ function contentTypeFor(filePath) {
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
     ".json": "application/json; charset=utf-8",
+    ".jsonl": "application/x-ndjson; charset=utf-8",
     ".svg": "image/svg+xml"
   }[ext] || "application/octet-stream";
 }
@@ -100,7 +101,7 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/records") {
-    return sendJson(response, 200, { records: memoryStore.listRecords({ limit: 200 }) });
+    return sendJson(response, 200, { records: memoryStore.listRecords({ limit: 200 }), totalRecordCount: memoryStore.countRecords() });
   }
 
   if (request.method === "GET" && url.pathname === "/api/records/search") {

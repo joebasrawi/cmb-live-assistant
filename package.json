@@ -8,6 +8,7 @@
     "start": "node src/server.js",
     "start:static": "node scripts/static-server.js",
     "check": "node scripts/check-env.js",
-    "import-records": "node scripts/import-records.js"
+    "import-records": "node scripts/import-records.js",
+    "ingest:official": "node scripts/ingest-official-archives.js"
   }
 }

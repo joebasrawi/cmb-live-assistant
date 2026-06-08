@@ -63,6 +63,7 @@ export class MemoryStore {
     this.rootDir = rootDir;
     this.documentsPath = path.join(rootDir, "data", "memory", "documents.jsonl");
     this.recordsPath = path.join(rootDir, "data", "memory", "records.jsonl");
+    this.archiveRecordsPath = path.join(rootDir, "public", "data", "official-archive-records.jsonl");
     this.documents = [];
     this.records = [];
   }
@@ -70,7 +71,10 @@ export class MemoryStore {
   async load() {
     await fs.mkdir(path.dirname(this.documentsPath), { recursive: true });
     this.documents = await readJsonl(this.documentsPath);
-    this.records = await readJsonl(this.recordsPath);
+    this.records = [
+      ...(await readJsonl(this.recordsPath)),
+      ...(await readJsonl(this.archiveRecordsPath))
+    ];
     return { documents: this.documents, records: this.records };
   }
 
@@ -80,6 +84,10 @@ export class MemoryStore {
 
   listRecords({ limit = 50 } = {}) {
     return this.records.slice(0, limit);
+  }
+
+  countRecords() {
+    return this.records.length;
   }
 
   search(query, { limit = 5 } = {}) {

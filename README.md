@@ -14,11 +14,11 @@ It is designed to watch a live meeting transcript, detect references like agenda
 - Reference detection for agenda codes and common public-record terms.
 - Proactive alerts for possible inconsistencies, prior-record context, and vote-time checks.
 - Dais Mode for a cleaner live commissioner view.
-- Static public demo mode for GitHub Pages. The live backend features still require the Node server.
+- Dark-mode public dashboard for GitHub Pages.
+- Static public archive search over a generated 2020-forward official metadata index.
 
 ## What Comes Next
 
-- Ingest official Miami Beach agenda packets and minutes since 2023.
 - Add live audio capture from MBTV/YouTube or Zoom.
 - Wire realtime transcription.
 - Add OpenAI Responses API note generation with file search and custom tools.
@@ -68,15 +68,23 @@ The proactive watcher compares live transcript claims against structured prior-m
 
 ```text
 data/memory/records.jsonl
+public/data/official-archive-records.jsonl
 ```
 
-The current records are demo records used to prove the alert behavior. Import official records with:
+The current official metadata index is generated from PrimeGov and City Clerk Laserfiche/WebLink. Refresh it with:
+
+```powershell
+node scripts/ingest-official-archives.js --from-year=2020 --max-weblink-records=20000
+```
+
+Import additional hand-reviewed statement/vote records with:
 
 ```powershell
 node scripts/import-records.js .\path\to\records.jsonl
 ```
 
 See `docs/proactive-watcher.md` for the schema and guardrails.
+See `docs/production-launch.md` for production hosting, storage, and live-meeting requirements.
 
 ## Official Source Starting Points
 

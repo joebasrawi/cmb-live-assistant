@@ -13,7 +13,9 @@ function contentTypeFor(filePath) {
   return {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
-    ".js": "text/javascript; charset=utf-8"
+    ".js": "text/javascript; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".jsonl": "application/x-ndjson; charset=utf-8"
   }[ext] || "application/octet-stream";
 }
 

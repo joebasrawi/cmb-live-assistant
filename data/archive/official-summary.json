@@ -1,0 +1,34 @@
+{
+  "generatedAt": "2026-06-08T13:51:48.450Z",
+  "fromYear": 2020,
+  "toYear": 2026,
+  "recordCount": 13879,
+  "primeGovCount": 1914,
+  "weblinkCount": 12959,
+  "byType": {
+    "primegov-upcoming-document": 14,
+    "primegov-upcoming-meeting": 7,
+    "primegov-archived-document": 1229,
+    "weblink-document": 9226,
+    "primegov-archived-meeting": 664,
+    "weblink-folder": 1015,
+    "weblink-pdf": 1722,
+    "weblink-msg": 2
+  },
+  "byTopic": {
+    "official record": 855,
+    "commission meeting": 543,
+    "finance": 248,
+    "business impact estimate": 393,
+    "ordinance": 543,
+    "land use": 165,
+    "resolution": 6825,
+    "public safety": 103,
+    "LTC": 4203,
+    "video": 1
+  },
+  "sources": {
+    "primeGov": "https://miamibeachfl.primegov.com/public/portal",
+    "weblink": "https://docmgmt.miamibeachfl.gov/WebLink/Browse.aspx?id=120704&dbid=0&repo=CityClerk"
+  }
+}
