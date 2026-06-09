@@ -90,6 +90,17 @@ function confidenceLabel(value) {
   return "Needs aide review";
 }
 
+function trustFields({ evidence, type, reason }) {
+  return {
+    reviewStatus: "draft",
+    audience: "aide",
+    why: reason,
+    sourceCount: evidence.length,
+    sourceRequirement: evidence.length ? "official-source-attached" : "no-source-no-alert",
+    needsReview: type === "possible-contradiction"
+  };
+}
+
 function isStrongCurrentClaim(text, stance) {
   if (stance === "unprecedented") return true;
   if (["no-fiscal-impact", "fiscal-impact", "no-procurement", "procurement"].includes(stance)) return true;
@@ -172,7 +183,12 @@ export class ProactiveWatcher {
         body: `The live statement sounds like ${current.label}, but prior records in memory point the other way.`,
         recommendation: "Open the source card, then ask staff to confirm the prior record before relying on the live statement.",
         triggerText: segment.text,
-        evidence
+        evidence,
+        ...trustFields({
+          evidence,
+          type: "possible-contradiction",
+          reason: `Detected a strong ${current.label} claim about ${topic} and found prior source records with an opposing stance.`
+        })
       });
     }
 
@@ -202,7 +218,14 @@ export class ProactiveWatcher {
         : "Meeting memory has related prior material that may help frame the live discussion.",
       recommendation: "Open the source card and verify the current agenda item against the earlier record.",
       triggerText: segment.text,
-      evidence
+      evidence,
+      ...trustFields({
+        evidence,
+        type: claimsNoHistory ? "prior-record-differs" : "prior-record-found",
+        reason: claimsNoHistory
+          ? `Detected a no-prior-history claim and found related source records for ${topic}.`
+          : `Detected a request for prior context and found related source records for ${topic}.`
+      })
     }];
   }
 
@@ -217,6 +240,7 @@ export class ProactiveWatcher {
 
     const query = [...referenceLabels, ...topics].join(" ");
     const evidence = this.memoryStore.searchRecords(query, { limit: 5 }).map(compactEvidence);
+    if (!evidence.length) return null;
     const confidence = confidenceFor(evidence, "decision-support");
 
     return {
@@ -230,7 +254,12 @@ export class ProactiveWatcher {
       body: "A vote or motion may be imminent. The assistant pulled related prior records for a quick dais check.",
       recommendation: "Confirm item title, fiscal impact, procurement path, sponsor, and any prior vote before the motion is finalized.",
       triggerText: segment.text,
-      evidence
+      evidence,
+      ...trustFields({
+        evidence,
+        type: "decision-support",
+        reason: "Detected vote or motion language and found related source records for the referenced item or topic."
+      })
     };
   }
 }

@@ -17,6 +17,8 @@ It is designed to watch a live meeting transcript, detect references like agenda
 - Three role-based accounts: one commissioner view and two aide views.
 - Aide-reviewed cards that aides can send into the commissioner live room.
 - Preflight checks for model config, stream tools, indexed memory, and current agenda preload.
+- Aide Review queue for draft catches before they reach the commissioner.
+- Meeting Prep with current agenda sources, risk flags, and "What should I ask?" questions.
 - Dark-mode public dashboard for GitHub Pages.
 - Static public archive search over a generated 2020-forward official metadata index.
 
@@ -70,6 +72,8 @@ AIDE2_USERNAME=
 AIDE2_PASSWORD=
 AIDE2_NAME=
 ```
+
+Commissioner accounts open into a minimal dais view: Ask the Staffer, meeting prep, and aide-reviewed important cards. Aide accounts open the fuller operations view with preflight, draft alert review, source notes, transcript, and the ability to send reviewed cards to the commissioner.
 
 ## Environment Check
 

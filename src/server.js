@@ -8,6 +8,7 @@ import { ProactiveWatcher } from "./proactiveWatcher.js";
 import { answerQuestion } from "./answerEngine.js";
 import { LiveTranscriptionService } from "./liveTranscriptionService.js";
 import { authenticateLogin, authenticateRequest } from "./auth.js";
+import { buildMeetingPrep } from "./prepEngine.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -127,6 +128,11 @@ async function handleApi(request, response, url) {
     return sendJson(response, 200, { records: memoryStore.currentAgendaRecords({ limit: 20 }) });
   }
 
+  if (request.method === "GET" && url.pathname === "/api/prep") {
+    const q = url.searchParams.get("q") || "";
+    return sendJson(response, 200, { prep: buildMeetingPrep({ memoryStore, query: q }) });
+  }
+
   if (request.method === "GET" && url.pathname === "/api/memory") {
     return sendJson(response, 200, { documents: memoryStore.list({ limit: 100 }) });
   }
@@ -214,6 +220,13 @@ async function handleApi(request, response, url) {
       if (user.role !== "aide") return sendJson(response, 403, { error: "Only aide accounts can push cards." });
       const body = await readJson(request);
       const session = assistant.pushCard(sessionId, { ...body, createdBy: user.name });
+      return session ? sendJson(response, 200, { session }) : notFound(response);
+    }
+
+    if (request.method === "POST" && action === "review-alert") {
+      if (user.role !== "aide") return sendJson(response, 403, { error: "Only aide accounts can review alerts." });
+      const body = await readJson(request);
+      const session = assistant.reviewAlert(sessionId, { ...body, createdBy: user.name });
       return session ? sendJson(response, 200, { session }) : notFound(response);
     }
   }

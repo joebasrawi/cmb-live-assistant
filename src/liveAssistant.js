@@ -39,6 +39,7 @@ export class LiveAssistant {
       alerts: [],
       notes: [],
       cards: [],
+      dismissedAlertIds: [],
       references: []
     };
     this.sessions.set(session.id, session);
@@ -74,6 +75,7 @@ export class LiveAssistant {
       alerts: session.alerts.slice(-40),
       notes: session.notes.slice(-40),
       cards: session.cards.slice(-20),
+      dismissedAlertIds: (session.dismissedAlertIds || []).slice(-80),
       references: session.references.slice(-40)
     };
   }
@@ -168,6 +170,10 @@ export class LiveAssistant {
       priority,
       confidence: "aide-reviewed",
       confidenceLabel: "Aide reviewed",
+      reviewStatus: "approved",
+      audience: "commissioner",
+      why: "An aide reviewed this item and sent it to the commissioner.",
+      sourceCount: Array.isArray(evidence) ? evidence.length : 0,
       at: new Date().toISOString(),
       title: String(title || "Aide note").trim(),
       body: String(body || "").trim(),
@@ -184,6 +190,39 @@ export class LiveAssistant {
     this.broadcast(sessionId, "alerts", [card]);
     this.broadcast(sessionId, "snapshot", this.publicSession(session));
     return this.publicSession(session);
+  }
+
+  reviewAlert(sessionId, { alertId, action, createdBy = "Aide", note = "" }) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+    const alert = session.alerts.find((item) => item.id === alertId);
+    if (!alert) return this.publicSession(session);
+
+    if (action === "dismiss") {
+      alert.reviewStatus = "dismissed";
+      alert.reviewedBy = createdBy;
+      alert.reviewedAt = new Date().toISOString();
+      if (!session.dismissedAlertIds.includes(alertId)) session.dismissedAlertIds.push(alertId);
+      session.updatedAt = alert.reviewedAt;
+      this.broadcast(sessionId, "snapshot", this.publicSession(session));
+      return this.publicSession(session);
+    }
+
+    this.pushCard(sessionId, {
+      title: alert.title,
+      body: note ? `${alert.body}\n\nAide note: ${note}` : alert.body,
+      recommendation: alert.recommendation,
+      evidence: alert.evidence,
+      priority: alert.priority,
+      source: "reviewed-alert",
+      createdBy
+    });
+    alert.reviewStatus = "sent";
+    alert.reviewedBy = createdBy;
+    alert.reviewedAt = new Date().toISOString();
+    const snapshot = this.publicSession(session);
+    this.broadcast(sessionId, "snapshot", snapshot);
+    return snapshot;
   }
 
   createNote(segment, references) {

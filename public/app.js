@@ -16,6 +16,7 @@ const state = {
   notes: [],
   references: [],
   answers: [],
+  prep: null,
   sourceIndex: new Map(),
   archiveLoaded: false,
   archiveSummary: null,
@@ -317,16 +318,26 @@ const elements = {
   sendLineBtn: document.querySelector("#sendLineBtn"),
   askText: document.querySelector("#askText"),
   askBtn: document.querySelector("#askBtn"),
+  prepBtn: document.querySelector("#prepBtn"),
+  prepPanel: document.querySelector("#prepPanel"),
+  prepTitle: document.querySelector("#prepTitle"),
+  prepSummary: document.querySelector("#prepSummary"),
+  prepFlags: document.querySelector("#prepFlags"),
+  prepQuestions: document.querySelector("#prepQuestions"),
+  prepSources: document.querySelector("#prepSources"),
+  closePrepBtn: document.querySelector("#closePrepBtn"),
   askFile: document.querySelector("#askFile"),
   attachedFileLabel: document.querySelector("#attachedFileLabel"),
   sourceUrl: document.querySelector("#sourceUrl"),
   answersList: document.querySelector("#answersList"),
   alertsList: document.querySelector("#alertsList"),
+  reviewList: document.querySelector("#reviewList"),
   transcriptList: document.querySelector("#transcriptList"),
   notesList: document.querySelector("#notesList"),
   referenceList: document.querySelector("#referenceList"),
   answerCount: document.querySelector("#answerCount"),
   alertCount: document.querySelector("#alertCount"),
+  reviewCount: document.querySelector("#reviewCount"),
   transcriptCount: document.querySelector("#transcriptCount"),
   noteCount: document.querySelector("#noteCount"),
   referenceCount: document.querySelector("#referenceCount"),
@@ -452,28 +463,67 @@ function renderSnapshot(session) {
   renderDashboardMetrics();
   renderAnswers();
   renderAlerts();
+  renderReviewQueue();
   renderTranscript();
   renderNotes();
   renderReferences();
 }
 
-function renderAlerts() {
-  elements.alertCount.textContent = `${state.alerts.length} alert${state.alerts.length === 1 ? "" : "s"}`;
-  elements.dashboardAlertMetric.textContent = state.alerts.length;
-  elements.alertsList.innerHTML = "";
-  if (!state.alerts.length) {
-    elements.alertsList.append(emptyState("Live catches will appear here."));
-    return;
-  }
+function isAide() {
+  return !state.currentUser || state.currentUser.role === "aide";
+}
 
+function isCommissioner() {
+  return state.currentUser?.role === "commissioner";
+}
+
+function isDismissed(alert) {
+  return alert.reviewStatus === "dismissed";
+}
+
+function isApprovedForCommissioner(alert) {
+  return alert.reviewStatus === "approved" || alert.audience === "commissioner" || alert.type === "aide-card";
+}
+
+function sortedAlertItems(alerts) {
   const priorityRank = { high: 3, medium: 2, low: 1 };
-  const sortedAlerts = [...state.alerts].sort((a, b) => {
+  return [...alerts].sort((a, b) => {
     const rankDelta = (priorityRank[b.priority] || 0) - (priorityRank[a.priority] || 0);
     if (rankDelta) return rankDelta;
     return new Date(b.at) - new Date(a.at);
   });
+}
 
-  for (const alert of sortedAlerts) {
+function renderAlerts() {
+  const visibleAlerts = sortedAlertItems(state.alerts.filter((alert) => !isDismissed(alert) && (isCommissioner() ? isApprovedForCommissioner(alert) : isApprovedForCommissioner(alert))));
+  elements.alertCount.textContent = `${visibleAlerts.length} card${visibleAlerts.length === 1 ? "" : "s"}`;
+  elements.dashboardAlertMetric.textContent = visibleAlerts.length;
+  elements.alertsList.innerHTML = "";
+  if (!visibleAlerts.length) {
+    elements.alertsList.append(emptyState(isCommissioner() ? "Aide-reviewed cards will appear here." : "Approved commissioner cards will appear here."));
+    return;
+  }
+
+  for (const alert of visibleAlerts) {
+    elements.alertsList.append(renderAlertCard(alert, { review: false }));
+  }
+}
+
+function renderReviewQueue() {
+  if (!elements.reviewList) return;
+  const drafts = sortedAlertItems(state.alerts.filter((alert) => !isDismissed(alert) && alert.reviewStatus !== "sent" && !isApprovedForCommissioner(alert)));
+  elements.reviewCount.textContent = `${drafts.length} draft${drafts.length === 1 ? "" : "s"}`;
+  elements.reviewList.innerHTML = "";
+  if (!drafts.length) {
+    elements.reviewList.append(emptyState("Draft catches that need aide review will appear here."));
+    return;
+  }
+  for (const alert of drafts) {
+    elements.reviewList.append(renderAlertCard(alert, { review: true }));
+  }
+}
+
+function renderAlertCard(alert, { review = false } = {}) {
     indexSources(alert.evidence);
     const item = document.createElement("article");
     item.className = `alert-item priority-${escapeClass(alert.priority)}`;
@@ -484,20 +534,24 @@ function renderAlerts() {
         <div class="pill-row">
           <span class="priority-pill">${escapeHtml(alert.priority || "medium")}</span>
           ${confidence ? `<span class="confidence-pill">${escapeHtml(confidence)}</span>` : ""}
+          ${alert.sourceCount ? `<span class="source-count-pill">${escapeHtml(alert.sourceCount)} source${alert.sourceCount === 1 ? "" : "s"}</span>` : ""}
         </div>
         <span>${formatTime(alert.at)}</span>
       </div>
       <h3>${escapeHtml(alert.title)}</h3>
       <p>${escapeHtml(alert.body)}</p>
+      ${alert.why ? `<div class="why-box"><strong>Why this appeared</strong><p>${escapeHtml(alert.why)}</p></div>` : ""}
       <div class="recommendation">${escapeHtml(alert.recommendation || "")}</div>
       <div class="evidence-list">${evidence}</div>
       ${alert.createdBy ? `<p class="aide-credit">Sent by ${escapeHtml(alert.createdBy)}</p>` : ""}
       <div class="card-actions aide-only">
-        <button class="secondary compact-button" data-push-alert-id="${escapeAttribute(alert.id)}">Send to Commissioner</button>
+        ${review
+          ? `<button class="compact-button" data-approve-alert-id="${escapeAttribute(alert.id)}">Send to Commissioner</button>
+             <button class="secondary compact-button" data-dismiss-alert-id="${escapeAttribute(alert.id)}">Dismiss</button>`
+          : `<button class="secondary compact-button" data-push-alert-id="${escapeAttribute(alert.id)}">Send Again</button>`}
       </div>
     `;
-    elements.alertsList.append(item);
-  }
+    return item;
 }
 
 function renderAnswers() {
@@ -512,15 +566,20 @@ function renderAnswers() {
     indexSources(answer.evidence);
     const item = document.createElement("article");
     item.className = "chat-exchange";
+    const suggestedQuestions = (answer.suggestedQuestions || answer.prep?.questions || [])
+      .map((item) => `<button class="question-chip" data-question="${escapeAttribute(item.question)}">${escapeHtml(item.label || "Ask")}</button>`)
+      .join("");
     item.innerHTML = `
       <div class="chat-message user-message">
         <div class="message-meta"><span>You</span><span>${formatTime(answer.at)}</span></div>
         <p>${escapeHtml(answer.question)}</p>
       </div>
       <div class="chat-message assistant-message">
-        <div class="message-meta"><span>${escapeHtml(answer.mode)}</span><span>Source-backed</span></div>
+        <div class="message-meta"><span>${escapeHtml(answer.mode)}</span><span>${escapeHtml(answer.confidenceLabel || "Source-backed")}</span></div>
         <p>${escapeHtml(answer.answer)}</p>
+        ${answer.why ? `<div class="why-box"><strong>Why this answer</strong><p>${escapeHtml(answer.why)}</p></div>` : ""}
         <div class="recommendation">${escapeHtml(answer.recommendation)}</div>
+        ${suggestedQuestions ? `<div class="suggested-questions">${suggestedQuestions}</div>` : ""}
         <div class="evidence-list">${answer.evidence.map(renderEvidence).join("")}</div>
         <div class="card-actions aide-only">
           <button class="secondary compact-button" data-push-answer-id="${escapeAttribute(answer.id)}">Send to Commissioner</button>
@@ -569,6 +628,74 @@ function welcomeMessage() {
     <p>Answers include the official sources they rely on.</p>
   `;
   return node;
+}
+
+function renderPrep(prep) {
+  state.prep = prep;
+  if (!prep) {
+    elements.prepPanel.hidden = true;
+    return;
+  }
+
+  indexSources(prep.sources);
+  elements.prepPanel.hidden = false;
+  elements.prepTitle.textContent = prep.title || "Meeting Prep";
+  elements.prepSummary.textContent = prep.summary || "Current item checks and questions.";
+  elements.prepFlags.innerHTML = (prep.flags || [])
+    .map((flag) => `<span class="prep-flag ${flag.active ? "active" : ""}">${escapeHtml(flag.label)}</span>`)
+    .join("");
+  elements.prepQuestions.innerHTML = (prep.questions || [])
+    .map((item) => `
+      <button class="prep-question" data-question="${escapeAttribute(item.question)}">
+        <span>${escapeHtml(item.label || "Question")}</span>
+        ${escapeHtml(item.question)}
+      </button>
+    `)
+    .join("");
+  elements.prepSources.innerHTML = (prep.sources || []).slice(0, 4).map(renderEvidence).join("");
+}
+
+async function loadPrep(query = "") {
+  try {
+    const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
+    const payload = state.staticMode
+      ? { prep: buildStaticPrep(query) }
+      : await api(`/api/prep${suffix}`);
+    renderPrep(payload.prep);
+  } catch (error) {
+    state.notes.push({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      title: "Prep unavailable",
+      body: error.message,
+      confidence: "needs-review",
+      sources: []
+    });
+    renderNotes();
+  }
+}
+
+function buildStaticPrep(query = "") {
+  const sources = searchStaticMemory(query || "vote fiscal procurement resolution ordinance", { limit: 6 });
+  return {
+    id: crypto.randomUUID(),
+    at: new Date().toISOString(),
+    title: "Demo meeting prep",
+    summary: `${sources.length} demo source record${sources.length === 1 ? "" : "s"} are ready. Use this as a rehearsal surface only.`,
+    flags: [
+      { id: "fiscal", label: "Fiscal", active: true },
+      { id: "procurement", label: "Procurement", active: true },
+      { id: "legal", label: "Legal form", active: true },
+      { id: "history", label: "Prior record", active: true }
+    ],
+    questions: [
+      { label: "Fiscal", question: "Can staff state the fiscal impact and whether a budget amendment is required?" },
+      { label: "Procurement", question: "Can staff confirm whether an RFP, RFQ, bid, or contract path applies?" },
+      { label: "History", question: "Has this item or a similar item come before the Commission before?" },
+      { label: "Source", question: "Which agenda memo, LTC, resolution, or ordinance should we rely on as the source?" }
+    ],
+    sources
+  };
 }
 
 function renderEvidence(source) {
@@ -693,6 +820,7 @@ function connectEvents() {
   state.eventSource.addEventListener("alerts", (event) => {
     state.alerts.push(...JSON.parse(event.data));
     renderAlerts();
+    renderReviewQueue();
   });
 
   state.eventSource.addEventListener("note", (event) => {
@@ -875,6 +1003,9 @@ async function pushCard(card) {
       id: crypto.randomUUID(),
       type: "aide-card",
       confidenceLabel: "Aide reviewed",
+      reviewStatus: "approved",
+      audience: "commissioner",
+      why: "An aide reviewed this item and sent it to the commissioner.",
       at: new Date().toISOString(),
       createdBy: state.currentUser?.name || "Aide",
       ...card
@@ -887,6 +1018,29 @@ async function pushCard(card) {
     method: "POST",
     body: JSON.stringify(card)
   });
+}
+
+async function reviewAlert(id, action) {
+  if (!id || !state.currentSessionId) return;
+  if (state.staticMode) {
+    const alert = state.alerts.find((item) => item.id === id);
+    if (!alert) return;
+    if (action === "dismiss") {
+      alert.reviewStatus = "dismissed";
+    } else {
+      await pushAlertToDais(id);
+      alert.reviewStatus = "sent";
+    }
+    renderAlerts();
+    renderReviewQueue();
+    return;
+  }
+
+  const payload = await api(`/api/sessions/${state.currentSessionId}/review-alert`, {
+    method: "POST",
+    body: JSON.stringify({ alertId: id, action })
+  });
+  renderSnapshot(payload.session);
 }
 
 async function loadPublicArchiveRecords() {
@@ -1074,6 +1228,7 @@ async function askStaffer() {
   answer.question = fileContext ? `${question} [attached: ${elements.askFile.files[0].name}]` : question;
   indexSources(answer.evidence);
   state.answers.push(answer);
+  if (answer.prep) renderPrep(answer.prep);
   elements.askText.value = "";
   clearAttachedFile();
   renderAnswers();
@@ -1359,6 +1514,10 @@ function staticAlert(priority, title, body, recommendation, evidence, segment) {
     priority,
     confidence: "demo",
     confidenceLabel: "Demo confidence",
+    reviewStatus: "draft",
+    audience: "aide",
+    why: "Demo transcript language matched a seeded prior-record pattern.",
+    sourceCount: Array.isArray(evidence) ? evidence.length : 0,
     at: segment.at,
     title,
     body,
@@ -1438,6 +1597,10 @@ elements.startDemoBtn.addEventListener("click", startDemo);
 elements.stopBtn.addEventListener("click", stopSession);
 elements.sendLineBtn.addEventListener("click", sendManualLine);
 elements.askBtn.addEventListener("click", askStaffer);
+elements.prepBtn.addEventListener("click", () => loadPrep(elements.askText.value.trim()));
+elements.closePrepBtn.addEventListener("click", () => {
+  elements.prepPanel.hidden = true;
+});
 elements.askText.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || event.shiftKey) return;
   event.preventDefault();
@@ -1471,6 +1634,28 @@ elements.sourceModal.addEventListener("click", (event) => {
   if (event.target.matches("[data-close-source]")) closeSourceModal();
 });
 document.addEventListener("click", (event) => {
+  const questionButton = event.target.closest("[data-question]");
+  if (questionButton) {
+    event.preventDefault();
+    elements.askText.value = questionButton.dataset.question || "";
+    elements.askText.focus();
+    return;
+  }
+
+  const approveAlertButton = event.target.closest("[data-approve-alert-id]");
+  if (approveAlertButton) {
+    event.preventDefault();
+    reviewAlert(approveAlertButton.dataset.approveAlertId, "approve").catch((error) => setStatus(error.message, "error"));
+    return;
+  }
+
+  const dismissAlertButton = event.target.closest("[data-dismiss-alert-id]");
+  if (dismissAlertButton) {
+    event.preventDefault();
+    reviewAlert(dismissAlertButton.dataset.dismissAlertId, "dismiss").catch((error) => setStatus(error.message, "error"));
+    return;
+  }
+
   const pushAlertButton = event.target.closest("[data-push-alert-id]");
   if (pushAlertButton) {
     event.preventDefault();

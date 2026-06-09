@@ -100,7 +100,10 @@
                 <h2>Ask the Staffer</h2>
                 <p class="panel-kicker">Source-backed answers for the dais.</p>
               </div>
-              <span id="answerCount" class="counter">0 answers</span>
+              <div class="header-actions">
+                <button id="prepBtn" class="secondary compact-button">What should I ask?</button>
+                <span id="answerCount" class="counter">0 answers</span>
+              </div>
             </div>
             <div id="answersList" class="chat-thread" aria-live="polite"></div>
             <div id="attachedFileLabel" class="attached-file" hidden></div>
@@ -119,10 +122,34 @@
             </div>
           </section>
 
+          <section id="prepPanel" class="prep-panel" hidden>
+            <div class="panel-header">
+              <div>
+                <h2 id="prepTitle">Meeting Prep</h2>
+                <p id="prepSummary" class="panel-kicker">Current item checks and questions.</p>
+              </div>
+              <button id="closePrepBtn" class="secondary compact-button">Hide</button>
+            </div>
+            <div id="prepFlags" class="prep-flags"></div>
+            <div id="prepQuestions" class="prep-questions"></div>
+            <div id="prepSources" class="prep-sources"></div>
+          </section>
+
+          <section class="review-panel aide-only">
+            <div class="panel-header">
+              <div>
+                <h2>Aide Review</h2>
+                <p class="panel-kicker">Draft catches stay here until an aide sends them to the commissioner.</p>
+              </div>
+              <span id="reviewCount" class="counter">0 drafts</span>
+            </div>
+            <div id="reviewList" class="alert-list"></div>
+          </section>
+
           <div class="panel-header">
             <div>
-              <h2>Priority Alerts</h2>
-              <p class="panel-kicker">Automatic catches from prior meeting memory.</p>
+              <h2>Important Cards</h2>
+              <p class="panel-kicker">Aide-reviewed, source-backed items for the commissioner.</p>
             </div>
             <span id="alertCount" class="counter">0 alerts</span>
           </div>

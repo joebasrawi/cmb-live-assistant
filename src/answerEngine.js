@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { tokenize } from "./memoryStore.js";
 import { hasUsableOpenAiKey, openAiApiKey } from "./openaiConfig.js";
+import { buildMeetingPrep } from "./prepEngine.js";
 
 const PEOPLE = [
   "Steven Meiner",
@@ -229,8 +230,17 @@ export async function answerQuestion({ memoryStore, question }) {
     answer,
     recommendation,
     evidence: [...evidenceMap.values()].slice(0, 8),
-    tokens: tokenize(query)
+    tokens: tokenize(query),
+    confidenceLabel: evidenceMap.size ? "Source-backed lead" : "Needs source review",
+    why: evidenceMap.size
+      ? "Matched the question against indexed official records and source-starting documents."
+      : "No strong local source match was found; verify in the official agenda packet."
   };
+
+  if (asksVotePrep || /what should (?:i|we|the commissioner) ask/i.test(query)) {
+    answerPayload.prep = buildMeetingPrep({ memoryStore, query });
+    answerPayload.suggestedQuestions = answerPayload.prep.questions;
+  }
 
   try {
     const aiAnswer = await askOpenAI({

@@ -284,6 +284,14 @@ body.aide-mode .aide-only {
   margin-bottom: 12px;
 }
 
+.header-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .transcript-header,
 .reference-header {
   margin-top: 8px;
@@ -641,7 +649,8 @@ a {
 
 .priority-pill,
 .reference-pill,
-.confidence-pill {
+.confidence-pill,
+.source-count-pill {
   justify-self: start;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -656,6 +665,13 @@ a {
   border-color: rgba(94, 224, 184, 0.24);
   background: rgba(94, 224, 184, 0.08);
   color: var(--green);
+  text-transform: none;
+}
+
+.source-count-pill {
+  border-color: rgba(36, 181, 216, 0.26);
+  background: rgba(36, 181, 216, 0.09);
+  color: #82ddf3;
   text-transform: none;
 }
 
@@ -681,8 +697,98 @@ a {
   line-height: 1.35;
 }
 
+.why-box {
+  margin: 10px 0;
+  border: 1px solid rgba(94, 224, 184, 0.16);
+  border-radius: 7px;
+  background: rgba(94, 224, 184, 0.065);
+  padding: 10px;
+}
+
+.why-box strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--green);
+  font-size: 12px;
+}
+
+.why-box p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .card-actions {
   margin-top: 10px;
+  gap: 8px;
+}
+
+.suggested-questions,
+.prep-questions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+}
+
+.question-chip,
+.prep-question {
+  min-height: 34px;
+  border-color: rgba(36, 181, 216, 0.25);
+  background: rgba(36, 181, 216, 0.1);
+  color: #a8ecfb;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.prep-panel,
+.review-panel {
+  border: 1px solid rgba(36, 181, 216, 0.2);
+  border-radius: 8px;
+  background: rgba(5, 12, 22, 0.45);
+  padding: 16px;
+}
+
+.prep-flags {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.prep-flag {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 5px 10px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.prep-flag.active {
+  border-color: rgba(94, 224, 184, 0.28);
+  background: rgba(94, 224, 184, 0.1);
+  color: var(--green);
+}
+
+.prep-question {
+  display: grid;
+  max-width: 360px;
+  min-height: 58px;
+  place-items: start;
+  text-align: left;
+  line-height: 1.35;
+  padding: 9px 11px;
+}
+
+.prep-question span {
+  color: var(--green);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.prep-sources {
+  display: grid;
   gap: 8px;
 }
 
