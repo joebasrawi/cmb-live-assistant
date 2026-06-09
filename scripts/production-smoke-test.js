@@ -25,6 +25,36 @@ async function request(path, { method = "GET", body, auth = true } = {}) {
   return payload;
 }
 
+async function requestWithToken(path, tokenOverride, { method = "GET", body } = {}) {
+  const response = await fetch(`${baseUrl}${path}`, {
+    method,
+    headers: {
+      Authorization: `Bearer ${tokenOverride}`,
+      ...(body ? { "Content-Type": "application/json" } : {})
+    },
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+  return { response, payload };
+}
+
+async function login(username, password) {
+  const response = await fetch(`${baseUrl}/api/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password })
+  });
+  const text = await response.text();
+  const payload = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    const error = new Error(payload.error || `${response.status} ${response.statusText}`);
+    error.status = response.status;
+    throw error;
+  }
+  return payload;
+}
+
 function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
@@ -43,6 +73,8 @@ async function main() {
   };
 
   let sessionId = "";
+  let aideLogin;
+  let commissionerLogin;
 
   await step("public health", async () => {
     const health = await request("/api/health", { auth: false });
@@ -53,6 +85,13 @@ async function main() {
   });
 
   await step("auth gate", expectUnauthorized);
+
+  await step("role login", async () => {
+    aideLogin = await login(process.env.SMOKE_AIDE_USERNAME || "aide1", process.env.SMOKE_AIDE_PASSWORD || "aide");
+    commissionerLogin = await login(process.env.SMOKE_COMMISSIONER_USERNAME || "commissioner", process.env.SMOKE_COMMISSIONER_PASSWORD || "dais");
+    assert(aideLogin.user?.role === "aide", "Aide login did not return aide role.");
+    assert(commissionerLogin.user?.role === "commissioner", "Commissioner login did not return commissioner role.");
+  });
 
   await step("records index", async () => {
     const records = await request("/api/records");
@@ -84,6 +123,45 @@ async function main() {
     });
     sessionId = session.id;
     assert(sessionId, "Session was not created.");
+  });
+
+  await step("aide card handoff", async () => {
+    const blocked = await requestWithToken(`/api/sessions/${sessionId}/push-card`, commissionerLogin.token, {
+      method: "POST",
+      body: {
+        title: "Blocked commissioner push",
+        body: "Commissioner accounts should not push aide-reviewed cards."
+      }
+    });
+    assert(blocked.response.status === 403, `Commissioner push should be forbidden, got ${blocked.response.status}.`);
+
+    const pushed = await requestWithToken(`/api/sessions/${sessionId}/push-card`, aideLogin.token, {
+      method: "POST",
+      body: {
+        title: "Smoke test aide handoff",
+        body: "Aide reviewed this source-backed card for the commissioner.",
+        recommendation: "Open the source, then ask staff to confirm on the record.",
+        priority: "high",
+        evidence: [
+          {
+            title: "Official MBTV",
+            sourceUrl: "https://www.miamibeachfl.gov/mbtv/",
+            claim: "City source page for meeting video and livestream access."
+          }
+        ]
+      }
+    });
+    assert(pushed.response.ok, `Aide push failed with ${pushed.response.status}.`);
+    const pushedCard = pushed.payload.session.alerts.find((item) => item.title === "Smoke test aide handoff");
+    assert(pushedCard?.audience === "commissioner", "Pushed card was not marked for commissioner.");
+    assert(pushedCard?.reviewStatus === "approved", "Pushed card was not marked approved.");
+
+    const commissionerView = await requestWithToken(`/api/sessions/${sessionId}`, commissionerLogin.token);
+    assert(commissionerView.response.ok, "Commissioner could not fetch session after handoff.");
+    assert(
+      commissionerView.payload.session.alerts.some((item) => item.title === "Smoke test aide handoff"),
+      "Commissioner session did not include pushed card."
+    );
   });
 
   await step("demo stream", async () => {
