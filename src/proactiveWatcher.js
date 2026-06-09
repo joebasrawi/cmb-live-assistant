@@ -74,6 +74,22 @@ function compactEvidence(record) {
   };
 }
 
+function confidenceFor(evidence, type) {
+  if (evidence.some((record) => record.timestamp || /transcript|video/i.test(`${record.recordType || ""} ${record.sourceUrl || ""}`))) {
+    return "high";
+  }
+  if (evidence.some((record) => /primegov|weblink|agenda|ltc|resolution|ordinance|official/i.test(`${record.sourceId || ""} ${record.recordType || ""} ${record.title || ""}`))) {
+    return type === "possible-contradiction" ? "medium" : "high";
+  }
+  return "low";
+}
+
+function confidenceLabel(value) {
+  if (value === "high") return "High confidence";
+  if (value === "medium") return "Medium confidence";
+  return "Needs aide review";
+}
+
 function isStrongCurrentClaim(text, stance) {
   if (stance === "unprecedented") return true;
   if (["no-fiscal-impact", "fiscal-impact", "no-procurement", "procurement"].includes(stance)) return true;
@@ -144,10 +160,13 @@ export class ProactiveWatcher {
       if (!priorRecords.length) continue;
 
       const evidence = priorRecords.slice(0, 3).map(compactEvidence);
+      const confidence = confidenceFor(evidence, "possible-contradiction");
       alerts.push({
         id: randomUUID(),
         type: "possible-contradiction",
         priority: "high",
+        confidence,
+        confidenceLabel: confidenceLabel(confidence),
         at: segment.at,
         title: `Possible inconsistency: ${segment.speaker} / ${topic}`,
         body: `The live statement sounds like ${current.label}, but prior records in memory point the other way.`,
@@ -168,10 +187,14 @@ export class ProactiveWatcher {
     const records = this.memoryStore.searchRecords(topic, { topic, limit: 4 });
     if (!records.length) return [];
 
+    const evidence = records.slice(0, 4).map(compactEvidence);
+    const confidence = confidenceFor(evidence, claimsNoHistory ? "prior-record-differs" : "prior-record-found");
     return [{
       id: randomUUID(),
       type: claimsNoHistory ? "prior-record-differs" : "prior-record-found",
       priority: claimsNoHistory ? "high" : "medium",
+      confidence,
+      confidenceLabel: confidenceLabel(confidence),
       at: segment.at,
       title: claimsNoHistory ? `Prior record found for ${topic}` : `Relevant prior record: ${topic}`,
       body: claimsNoHistory
@@ -179,7 +202,7 @@ export class ProactiveWatcher {
         : "Meeting memory has related prior material that may help frame the live discussion.",
       recommendation: "Open the source card and verify the current agenda item against the earlier record.",
       triggerText: segment.text,
-      evidence: records.slice(0, 4).map(compactEvidence)
+      evidence
     }];
   }
 
@@ -193,18 +216,21 @@ export class ProactiveWatcher {
     if (!referenceLabels.length && !topics.length) return null;
 
     const query = [...referenceLabels, ...topics].join(" ");
-    const records = this.memoryStore.searchRecords(query, { limit: 5 });
+    const evidence = this.memoryStore.searchRecords(query, { limit: 5 }).map(compactEvidence);
+    const confidence = confidenceFor(evidence, "decision-support");
 
     return {
       id: randomUUID(),
       type: "decision-support",
       priority: "medium",
+      confidence,
+      confidenceLabel: confidenceLabel(confidence),
       at: segment.at,
       title: "Vote-time context check",
       body: "A vote or motion may be imminent. The assistant pulled related prior records for a quick dais check.",
       recommendation: "Confirm item title, fiscal impact, procurement path, sponsor, and any prior vote before the motion is finalized.",
       triggerText: segment.text,
-      evidence: records.slice(0, 5).map(compactEvidence)
+      evidence
     };
   }
 }

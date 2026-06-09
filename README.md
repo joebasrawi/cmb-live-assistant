@@ -14,6 +14,9 @@ It is designed to watch a live meeting transcript, detect references like agenda
 - Reference detection for agenda codes and common public-record terms.
 - Proactive alerts for possible inconsistencies, prior-record context, and vote-time checks.
 - Dais Mode for a cleaner live commissioner view.
+- Three role-based accounts: one commissioner view and two aide views.
+- Aide-reviewed cards that aides can send into the commissioner live room.
+- Preflight checks for model config, stream tools, indexed memory, and current agenda preload.
 - Dark-mode public dashboard for GitHub Pages.
 - Static public archive search over a generated 2020-forward official metadata index.
 
@@ -22,7 +25,7 @@ It is designed to watch a live meeting transcript, detect references like agenda
 - Add live audio capture from MBTV/YouTube or Zoom.
 - Wire realtime transcription.
 - Add OpenAI Responses API note generation with file search and custom tools.
-- Put the dashboard behind production authentication for you, commissioners, and staff.
+- Add stronger production authentication, audit logs, and account management.
 
 ## Run Locally
 
@@ -42,6 +45,30 @@ If you have a normal Node.js install available, this also works:
 
 ```powershell
 npm start
+```
+
+## Dashboard Accounts
+
+The app starts with three simple accounts:
+
+```text
+commissioner / dais
+aide1 / aide
+aide2 / aide
+```
+
+Change them in Railway Variables or a local `.env` file:
+
+```text
+COMMISSIONER_USERNAME=
+COMMISSIONER_PASSWORD=
+COMMISSIONER_NAME=
+AIDE1_USERNAME=
+AIDE1_PASSWORD=
+AIDE1_NAME=
+AIDE2_USERNAME=
+AIDE2_PASSWORD=
+AIDE2_NAME=
 ```
 
 ## Environment Check

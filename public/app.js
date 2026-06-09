@@ -1,3 +1,12 @@
+function loadStoredUser() {
+  try {
+    return JSON.parse(sessionStorage.getItem("cmb-user") || "null");
+  } catch {
+    sessionStorage.removeItem("cmb-user");
+    return null;
+  }
+}
+
 const state = {
   sessions: [],
   currentSessionId: null,
@@ -14,6 +23,7 @@ const state = {
   micActive: false,
   speechRecognition: null,
   accessToken: sessionStorage.getItem("cmb-access-token") || "",
+  currentUser: loadStoredUser(),
   daisMode: localStorage.getItem("cmb-dais-mode") !== "false",
   staticMode: false,
   staticTimer: null
@@ -294,10 +304,12 @@ const elements = {
   statusDot: document.querySelector("#statusDot"),
   statusText: document.querySelector("#statusText"),
   daisModeBtn: document.querySelector("#daisModeBtn"),
+  accountPill: document.querySelector("#accountPill"),
   refreshBtn: document.querySelector("#refreshBtn"),
   sessionSelect: document.querySelector("#sessionSelect"),
   liveSourceInput: document.querySelector("#liveSourceInput"),
   startLiveBtn: document.querySelector("#startLiveBtn"),
+  preflightBtn: document.querySelector("#preflightBtn"),
   startMicBtn: document.querySelector("#startMicBtn"),
   startDemoBtn: document.querySelector("#startDemoBtn"),
   stopBtn: document.querySelector("#stopBtn"),
@@ -329,6 +341,7 @@ const elements = {
   sourceModalBody: document.querySelector("#sourceModalBody"),
   closeSourceBtn: document.querySelector("#closeSourceBtn"),
   authGate: document.querySelector("#authGate"),
+  usernameInput: document.querySelector("#usernameInput"),
   accessTokenInput: document.querySelector("#accessTokenInput"),
   accessTokenBtn: document.querySelector("#accessTokenBtn"),
   authError: document.querySelector("#authError")
@@ -465,15 +478,23 @@ function renderAlerts() {
     const item = document.createElement("article");
     item.className = `alert-item priority-${escapeClass(alert.priority)}`;
     const evidence = (alert.evidence || []).map(renderEvidence).join("");
+    const confidence = alert.confidenceLabel || (alert.confidence ? `${alert.confidence} confidence` : "");
     item.innerHTML = `
       <div class="alert-topline">
-        <span class="priority-pill">${escapeHtml(alert.priority || "medium")}</span>
+        <div class="pill-row">
+          <span class="priority-pill">${escapeHtml(alert.priority || "medium")}</span>
+          ${confidence ? `<span class="confidence-pill">${escapeHtml(confidence)}</span>` : ""}
+        </div>
         <span>${formatTime(alert.at)}</span>
       </div>
       <h3>${escapeHtml(alert.title)}</h3>
       <p>${escapeHtml(alert.body)}</p>
       <div class="recommendation">${escapeHtml(alert.recommendation || "")}</div>
       <div class="evidence-list">${evidence}</div>
+      ${alert.createdBy ? `<p class="aide-credit">Sent by ${escapeHtml(alert.createdBy)}</p>` : ""}
+      <div class="card-actions aide-only">
+        <button class="secondary compact-button" data-push-alert-id="${escapeAttribute(alert.id)}">Send to Commissioner</button>
+      </div>
     `;
     elements.alertsList.append(item);
   }
@@ -501,6 +522,9 @@ function renderAnswers() {
         <p>${escapeHtml(answer.answer)}</p>
         <div class="recommendation">${escapeHtml(answer.recommendation)}</div>
         <div class="evidence-list">${answer.evidence.map(renderEvidence).join("")}</div>
+        <div class="card-actions aide-only">
+          <button class="secondary compact-button" data-push-answer-id="${escapeAttribute(answer.id)}">Send to Commissioner</button>
+        </div>
       </div>
     `;
     elements.answersList.append(item);
@@ -716,13 +740,30 @@ async function loadSessions() {
   }
 }
 
-function showAuthGate(message = "Enter the access token to use the live Railway backend.") {
+function applyUserMode({ forceRoleDefault = false } = {}) {
+  const user = state.currentUser;
+  document.body.classList.toggle("aide-mode", user?.role === "aide");
+  document.body.classList.toggle("commissioner-mode", user?.role === "commissioner");
+
+  if (elements.accountPill) {
+    elements.accountPill.hidden = !user;
+    elements.accountPill.textContent = user ? `${user.name} · ${user.role}` : "";
+  }
+
+  if (forceRoleDefault || user?.role === "commissioner") {
+    if (user?.role === "commissioner") setDaisMode(true);
+    if (user?.role === "aide") setDaisMode(false);
+  }
+}
+
+function showAuthGate(message = "Sign in with the commissioner or aide account.") {
   elements.authGate.hidden = false;
   elements.authError.hidden = !message;
   elements.authError.textContent = message || "";
-  elements.accessTokenInput.value = state.accessToken;
+  elements.usernameInput.value = state.currentUser?.username || "";
+  elements.accessTokenInput.value = "";
   setStatus("Locked", "error");
-  setTimeout(() => elements.accessTokenInput.focus(), 0);
+  setTimeout(() => (elements.usernameInput.value ? elements.accessTokenInput : elements.usernameInput).focus(), 0);
 }
 
 function hideAuthGate() {
@@ -733,15 +774,119 @@ function hideAuthGate() {
 }
 
 async function submitAccessToken() {
-  const token = elements.accessTokenInput.value.trim();
-  if (!token) {
-    showAuthGate("Paste the Railway access token first.");
+  const username = elements.usernameInput.value.trim();
+  const password = elements.accessTokenInput.value.trim();
+  if (!password) {
+    showAuthGate("Enter the account password first.");
     return;
   }
-  state.accessToken = token;
-  sessionStorage.setItem("cmb-access-token", token);
-  hideAuthGate();
-  await loadSessions();
+
+  if (!username) {
+    state.accessToken = password;
+    state.currentUser = null;
+    sessionStorage.setItem("cmb-access-token", password);
+    sessionStorage.removeItem("cmb-user");
+    applyUserMode();
+    hideAuthGate();
+    await loadSessions();
+    return;
+  }
+
+  try {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || "Invalid username or password");
+
+    state.accessToken = payload.token;
+    state.currentUser = payload.user;
+    sessionStorage.setItem("cmb-access-token", payload.token);
+    sessionStorage.setItem("cmb-user", JSON.stringify(payload.user));
+    applyUserMode({ forceRoleDefault: true });
+    hideAuthGate();
+    await loadSessions();
+  } catch (error) {
+    showAuthGate(error.message);
+  }
+}
+
+async function runPreflight() {
+  try {
+    const payload = await api("/api/preflight");
+    const failed = payload.checks.filter((check) => !check.ok);
+    const passed = payload.checks.length - failed.length;
+    const agendaLine = payload.currentAgenda.length
+      ? `${payload.currentAgenda.length} current agenda/source record${payload.currentAgenda.length === 1 ? "" : "s"} preloaded.`
+      : "No upcoming commission agenda record is preloaded yet.";
+    state.notes.push({
+      id: crypto.randomUUID(),
+      at: payload.checkedAt,
+      title: failed.length ? "Preflight needs attention" : "Preflight ready",
+      body: `${passed}/${payload.checks.length} checks passed. ${agendaLine}${failed.length ? ` Needs: ${failed.map((check) => check.label).join(", ")}.` : ""}`,
+      confidence: failed.length ? "needs-review" : "source-assisted",
+      sources: payload.currentAgenda
+    });
+    renderNotes();
+  } catch (error) {
+    state.notes.push({
+      id: crypto.randomUUID(),
+      at: new Date().toISOString(),
+      title: "Preflight failed",
+      body: error.message,
+      confidence: "needs-review",
+      sources: []
+    });
+    renderNotes();
+  }
+}
+
+async function pushAlertToDais(id) {
+  const alert = state.alerts.find((item) => item.id === id);
+  if (!alert || !state.currentSessionId) return;
+  await pushCard({
+    title: alert.title,
+    body: alert.body,
+    recommendation: alert.recommendation,
+    evidence: alert.evidence,
+    priority: alert.priority,
+    source: "aide-alert"
+  });
+}
+
+async function pushAnswerToDais(id) {
+  const answer = state.answers.find((item) => item.id === id);
+  if (!answer || !state.currentSessionId) return;
+  await pushCard({
+    title: answer.question,
+    body: answer.answer,
+    recommendation: answer.recommendation,
+    evidence: answer.evidence,
+    priority: "medium",
+    source: "aide-answer"
+  });
+}
+
+async function pushCard(card) {
+  if (state.staticMode) {
+    state.alerts.push({
+      id: crypto.randomUUID(),
+      type: "aide-card",
+      confidenceLabel: "Aide reviewed",
+      at: new Date().toISOString(),
+      createdBy: state.currentUser?.name || "Aide",
+      ...card
+    });
+    renderAlerts();
+    return;
+  }
+
+  await api(`/api/sessions/${state.currentSessionId}/push-card`, {
+    method: "POST",
+    body: JSON.stringify(card)
+  });
 }
 
 async function loadPublicArchiveRecords() {
@@ -1212,6 +1357,8 @@ function staticAlert(priority, title, body, recommendation, evidence, segment) {
     id: crypto.randomUUID(),
     type: priority === "high" ? "possible-contradiction" : "decision-support",
     priority,
+    confidence: "demo",
+    confidenceLabel: "Demo confidence",
     at: segment.at,
     title,
     body,
@@ -1285,6 +1432,7 @@ function escapeClass(value) {
 
 elements.refreshBtn.addEventListener("click", loadSessions);
 elements.startLiveBtn.addEventListener("click", startLive);
+elements.preflightBtn.addEventListener("click", runPreflight);
 elements.startMicBtn.addEventListener("click", startMicCapture);
 elements.startDemoBtn.addEventListener("click", startDemo);
 elements.stopBtn.addEventListener("click", stopSession);
@@ -1314,10 +1462,29 @@ elements.accessTokenInput.addEventListener("keydown", (event) => {
   event.preventDefault();
   submitAccessToken();
 });
+elements.usernameInput.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  elements.accessTokenInput.focus();
+});
 elements.sourceModal.addEventListener("click", (event) => {
   if (event.target.matches("[data-close-source]")) closeSourceModal();
 });
 document.addEventListener("click", (event) => {
+  const pushAlertButton = event.target.closest("[data-push-alert-id]");
+  if (pushAlertButton) {
+    event.preventDefault();
+    pushAlertToDais(pushAlertButton.dataset.pushAlertId).catch((error) => setStatus(error.message, "error"));
+    return;
+  }
+
+  const pushAnswerButton = event.target.closest("[data-push-answer-id]");
+  if (pushAnswerButton) {
+    event.preventDefault();
+    pushAnswerToDais(pushAnswerButton.dataset.pushAnswerId).catch((error) => setStatus(error.message, "error"));
+    return;
+  }
+
   const sourceButton = event.target.closest("[data-source-id]");
   if (!sourceButton) return;
   event.preventDefault();
@@ -1329,6 +1496,7 @@ document.addEventListener("keydown", (event) => {
 
 rebuildSourceIndex();
 setDaisMode(state.daisMode);
+applyUserMode();
 loadSessions().catch((error) => {
   setStatus(error.message, "error");
 });

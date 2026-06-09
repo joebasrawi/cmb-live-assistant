@@ -170,6 +170,15 @@ async function readJsonl(filePath) {
     .map((line) => JSON.parse(line));
 }
 
+function todayIso() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function isCommissionRecord(record) {
+  const haystack = `${record.topic || ""} ${record.meetingTitle || ""} ${record.title || ""}`.toLowerCase();
+  return haystack.includes("commission meeting") || haystack.includes("city commission") || haystack.includes("presentations and awards");
+}
+
 export class MemoryStore {
   constructor({ rootDir }) {
     this.rootDir = rootDir;
@@ -202,6 +211,27 @@ export class MemoryStore {
     return this.records.length;
   }
 
+  currentAgendaRecords({ limit = 12 } = {}) {
+    const today = todayIso();
+    const future = this.records
+      .filter((record) => record.meetingDate && record.meetingDate >= today && isCommissionRecord(record))
+      .sort((a, b) => String(a.meetingDate || "").localeCompare(String(b.meetingDate || "")));
+
+    const selectedDate = future[0]?.meetingDate;
+    if (!selectedDate) return [];
+
+    return this.records
+      .filter((record) => record.meetingDate === selectedDate && isCommissionRecord(record))
+      .sort((a, b) => {
+        const titleA = String(a.title || "");
+        const titleB = String(b.title || "");
+        if (/agenda/i.test(titleA) && !/agenda/i.test(titleB)) return -1;
+        if (!/agenda/i.test(titleA) && /agenda/i.test(titleB)) return 1;
+        return titleA.localeCompare(titleB);
+      })
+      .slice(0, limit);
+  }
+
   search(query, { limit = 5 } = {}) {
     const queryTokens = tokenize(query);
     if (!queryTokens.length) return [];
@@ -219,6 +249,7 @@ export class MemoryStore {
     const topicNeedle = String(topic || "").toLowerCase();
     const personNeedle = String(person || "").toLowerCase();
     const stanceNeedle = String(stance || "").toLowerCase();
+    const currentAgendaIds = new Set(this.currentAgendaRecords({ limit: 20 }).map((record) => record.id));
 
     return this.records
       .filter((record) => {
@@ -230,12 +261,15 @@ export class MemoryStore {
         }
         return true;
       })
-      .map((record) => ({
-        ...record,
-        score: queryTokens.length || dateMatches.size
-          ? scoreRecord(record, queryTokens, dateMatches) + scoreOfficialLookup(record, query)
-          : 1 + scoreOfficialLookup(record, query)
-      }))
+      .map((record) => {
+        const currentAgendaBoost = currentAgendaIds.has(record.id) ? 8 : 0;
+        return {
+          ...record,
+          score: (queryTokens.length || dateMatches.size
+            ? scoreRecord(record, queryTokens, dateMatches) + scoreOfficialLookup(record, query)
+            : 1 + scoreOfficialLookup(record, query)) + currentAgendaBoost
+        };
+      })
       .filter((record) => record.score > 0)
       .sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;

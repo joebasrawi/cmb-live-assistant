@@ -7,6 +7,7 @@ import { LiveAssistant } from "./liveAssistant.js";
 import { ProactiveWatcher } from "./proactiveWatcher.js";
 import { answerQuestion } from "./answerEngine.js";
 import { LiveTranscriptionService } from "./liveTranscriptionService.js";
+import { authenticateLogin, authenticateRequest } from "./auth.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const rootDir = path.resolve(__dirname, "..");
@@ -41,12 +42,6 @@ async function readJson(request) {
   for await (const chunk of request) chunks.push(chunk);
   const body = Buffer.concat(chunks).toString("utf8");
   return body ? JSON.parse(body) : {};
-}
-
-function isAuthorized(request, url) {
-  if (!process.env.ACCESS_TOKEN) return true;
-  const header = request.headers.authorization || "";
-  return header === `Bearer ${process.env.ACCESS_TOKEN}` || url.searchParams.get("access_token") === process.env.ACCESS_TOKEN;
 }
 
 function contentTypeFor(filePath) {
@@ -90,8 +85,46 @@ async function handleApi(request, response, url) {
     });
   }
 
-  if (!isAuthorized(request, url)) {
+  if (request.method === "POST" && url.pathname === "/api/login") {
+    const body = await readJson(request);
+    const login = authenticateLogin(body);
+    return login ? sendJson(response, 200, login) : sendJson(response, 401, { error: "Invalid username or password" });
+  }
+
+  const user = authenticateRequest(request, url);
+  if (!user) {
     return sendJson(response, 401, { error: "Unauthorized" });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/me") {
+    return sendJson(response, 200, { user });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/preflight") {
+    const live = liveTranscription.readiness();
+    const currentAgenda = memoryStore.currentAgendaRecords({ limit: 8 });
+    return sendJson(response, 200, {
+      ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && memoryStore.countRecords()),
+      checkedAt: new Date().toISOString(),
+      user,
+      live,
+      memory: {
+        recordCount: memoryStore.countRecords(),
+        documentCount: memoryStore.list({ limit: 100000 }).length
+      },
+      currentAgenda,
+      checks: [
+        { id: "openai", label: "OpenAI", ok: live.openAiConfigured },
+        { id: "ffmpeg", label: "Audio processing", ok: live.ffmpegAvailable },
+        { id: "ytdlp", label: "Live stream resolver", ok: live.ytDlpAvailable },
+        { id: "memory", label: "Official record memory", ok: memoryStore.countRecords() > 10000 },
+        { id: "agenda", label: "Current agenda preload", ok: currentAgenda.length > 0 }
+      ]
+    });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/current-agenda") {
+    return sendJson(response, 200, { records: memoryStore.currentAgendaRecords({ limit: 20 }) });
   }
 
   if (request.method === "GET" && url.pathname === "/api/memory") {
@@ -174,6 +207,13 @@ async function handleApi(request, response, url) {
     if (request.method === "POST" && action === "stop") {
       await liveTranscription.stop(sessionId, { silent: true });
       const session = assistant.stopDemo(sessionId);
+      return session ? sendJson(response, 200, { session }) : notFound(response);
+    }
+
+    if (request.method === "POST" && action === "push-card") {
+      if (user.role !== "aide") return sendJson(response, 403, { error: "Only aide accounts can push cards." });
+      const body = await readJson(request);
+      const session = assistant.pushCard(sessionId, { ...body, createdBy: user.name });
       return session ? sendJson(response, 200, { session }) : notFound(response);
     }
   }

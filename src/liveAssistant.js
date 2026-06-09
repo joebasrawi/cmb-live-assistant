@@ -38,6 +38,7 @@ export class LiveAssistant {
       transcript: [],
       alerts: [],
       notes: [],
+      cards: [],
       references: []
     };
     this.sessions.set(session.id, session);
@@ -72,6 +73,7 @@ export class LiveAssistant {
       transcript: session.transcript.slice(-80),
       alerts: session.alerts.slice(-40),
       notes: session.notes.slice(-40),
+      cards: session.cards.slice(-20),
       references: session.references.slice(-40)
     };
   }
@@ -153,6 +155,34 @@ export class LiveAssistant {
       note
     });
 
+    return this.publicSession(session);
+  }
+
+  pushCard(sessionId, { title, body, recommendation, evidence = [], priority = "medium", source = "aide", createdBy = "Aide" }) {
+    const session = this.sessions.get(sessionId);
+    if (!session) return null;
+
+    const card = {
+      id: randomUUID(),
+      type: "aide-card",
+      priority,
+      confidence: "aide-reviewed",
+      confidenceLabel: "Aide reviewed",
+      at: new Date().toISOString(),
+      title: String(title || "Aide note").trim(),
+      body: String(body || "").trim(),
+      recommendation: String(recommendation || "").trim(),
+      evidence: Array.isArray(evidence) ? evidence.slice(0, 5) : [],
+      source,
+      createdBy
+    };
+
+    session.cards.push(card);
+    session.alerts.push(card);
+    session.updatedAt = card.at;
+    this.broadcast(sessionId, "cards", [card]);
+    this.broadcast(sessionId, "alerts", [card]);
+    this.broadcast(sessionId, "snapshot", this.publicSession(session));
     return this.publicSession(session);
   }
 

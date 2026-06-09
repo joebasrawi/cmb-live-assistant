@@ -179,6 +179,24 @@ h3 {
   background: rgba(255, 255, 255, 0.08);
 }
 
+.account-pill {
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(94, 224, 184, 0.26);
+  border-radius: 999px;
+  padding: 0 11px;
+  background: rgba(94, 224, 184, 0.09);
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+
+.account-pill[hidden] {
+  display: none;
+}
+
 .status-dot {
   width: 11px;
   height: 11px;
@@ -215,6 +233,14 @@ h3 {
 
 .advanced-only {
   display: initial;
+}
+
+.aide-only {
+  display: none;
+}
+
+body.aide-mode .aide-only {
+  display: inline-flex;
 }
 
 .control-panel,
@@ -481,7 +507,7 @@ textarea {
 .button-row {
   display: grid;
   min-width: 0;
-  grid-template-columns: repeat(4, minmax(88px, 1fr));
+  grid-template-columns: repeat(5, minmax(88px, 1fr));
   gap: 8px;
   margin-bottom: 0;
 }
@@ -597,6 +623,13 @@ a {
   font-size: 12px;
 }
 
+.pill-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
 .answer-topline span:first-child {
   border: 1px solid rgba(31, 111, 145, 0.24);
   border-radius: 999px;
@@ -607,7 +640,8 @@ a {
 }
 
 .priority-pill,
-.reference-pill {
+.reference-pill,
+.confidence-pill {
   justify-self: start;
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -616,6 +650,13 @@ a {
   color: var(--muted);
   font-size: 12px;
   text-transform: capitalize;
+}
+
+.confidence-pill {
+  border-color: rgba(94, 224, 184, 0.24);
+  background: rgba(94, 224, 184, 0.08);
+  color: var(--green);
+  text-transform: none;
 }
 
 .alert-item p,
@@ -638,6 +679,17 @@ a {
   color: var(--ink);
   font-weight: 700;
   line-height: 1.35;
+}
+
+.card-actions {
+  margin-top: 10px;
+  gap: 8px;
+}
+
+.aide-credit {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 12px;
 }
 
 .evidence-list {

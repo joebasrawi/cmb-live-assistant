@@ -16,6 +16,7 @@
         </div>
         <div class="topbar-actions">
           <button id="daisModeBtn" class="secondary">Dais Mode</button>
+          <span id="accountPill" class="account-pill" hidden></span>
           <div class="status-strip">
             <span class="status-dot" id="statusDot"></span>
             <span id="statusText">Connecting</span>
@@ -46,6 +47,7 @@
 
             <div class="button-row">
               <button id="startLiveBtn">Start Live</button>
+              <button id="preflightBtn" class="secondary advanced-only">Preflight</button>
               <button id="startDemoBtn" class="secondary">Demo</button>
               <button id="stopBtn" class="secondary">Stop</button>
               <button id="startMicBtn" class="secondary advanced-only">Mic</button>
@@ -174,13 +176,17 @@
     <div id="authGate" class="auth-gate" hidden>
       <section class="auth-card" aria-labelledby="authTitle">
         <p class="eyebrow">Secure Dais Access</p>
-        <h2 id="authTitle">Enter Access Token</h2>
-        <p>Use the Railway access token for this live backend.</p>
+        <h2 id="authTitle">Sign In</h2>
+        <p>Use the commissioner or aide account for this room.</p>
         <label class="field">
-          <span>Access token</span>
-          <input id="accessTokenInput" type="password" autocomplete="current-password" placeholder="Paste token">
+          <span>Username</span>
+          <input id="usernameInput" type="text" autocomplete="username" placeholder="commissioner">
         </label>
-        <button id="accessTokenBtn" class="wide">Unlock Dashboard</button>
+        <label class="field">
+          <span>Password</span>
+          <input id="accessTokenInput" type="password" autocomplete="current-password" placeholder="Password">
+        </label>
+        <button id="accessTokenBtn" class="wide">Open Dashboard</button>
         <p id="authError" class="auth-error" hidden></p>
       </section>
     </div>
