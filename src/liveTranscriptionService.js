@@ -5,7 +5,7 @@ import { hasUsableOpenAiKey, openAiApiKey } from "./openaiConfig.js";
 
 const DEFAULT_CHUNK_SECONDS = Number(process.env.TRANSCRIPT_CHUNK_SECONDS || 18);
 const OPENAI_TRANSCRIBE_MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
-const CMB_YOUTUBE_LIVE_URL = "https://www.youtube.com/c/CityofMiamiBeachTV/live";
+const CMB_YOUTUBE_LIVE_URL = "https://www.youtube.com/cityofmiamibeach";
 
 function setupError(message) {
   const error = new Error(message);
@@ -26,7 +26,8 @@ function normalizeSourceUrl(value) {
   const sourceUrl = String(value || "").trim();
   if (
     /^https?:\/\/(?:www\.)?youtube\.com\/cityofmiamibeach\/?$/i.test(sourceUrl) ||
-    /^https?:\/\/(?:www\.)?youtube\.com\/c\/CityofMiamiBeachTV\/?$/i.test(sourceUrl)
+    /^https?:\/\/(?:www\.)?youtube\.com\/c\/CityofMiamiBeachTV(?:\/live)?\/?$/i.test(sourceUrl) ||
+    /^https?:\/\/(?:www\.)?youtube\.com\/@cityofmiamibeach(?:\/live)?\/?$/i.test(sourceUrl)
   ) {
     return CMB_YOUTUBE_LIVE_URL;
   }

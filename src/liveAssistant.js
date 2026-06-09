@@ -12,6 +12,17 @@ const DEMO_LINES = [
   { speaker: "Public Speaker", text: "Please also consider the traffic and parking impacts on residents." }
 ];
 
+function normalizeSourceUrl(sourceUrl) {
+  const value = String(sourceUrl || "").trim();
+  if (
+    /youtube\.com\/c\/CityofMiamiBeachTV\/live/i.test(value) ||
+    /youtube\.com\/@cityofmiamibeach\/live/i.test(value)
+  ) {
+    return "https://www.youtube.com/cityofmiamibeach";
+  }
+  return value;
+}
+
 export class LiveAssistant {
   constructor({ memoryStore, proactiveWatcher, rootDir }) {
     this.memoryStore = memoryStore;
@@ -31,7 +42,7 @@ export class LiveAssistant {
     const session = {
       id: randomUUID(),
       title: title || "City of Miami Beach live meeting",
-      sourceUrl: sourceUrl || process.env.CMB_DEFAULT_LIVE_URL || "https://www.youtube.com/c/CityofMiamiBeachTV/live",
+      sourceUrl: normalizeSourceUrl(sourceUrl || process.env.CMB_DEFAULT_LIVE_URL || "https://www.youtube.com/cityofmiamibeach"),
       status: "idle",
       createdAt: now,
       updatedAt: now,
@@ -56,7 +67,7 @@ export class LiveAssistant {
     const session = this.sessions.get(id);
     if (!session) return null;
     session.status = status;
-    if (sourceUrl) session.sourceUrl = sourceUrl;
+    if (sourceUrl) session.sourceUrl = normalizeSourceUrl(sourceUrl);
     session.updatedAt = new Date().toISOString();
     this.broadcast(id, "status", { status: session.status });
     this.broadcast(id, "snapshot", this.publicSession(session));
