@@ -39,6 +39,7 @@ The generated files are:
 - A production backend host such as Render, Fly.io, Railway, AWS, Azure, or a small VPS.
 - A private login layer for the commissioner and staff. Do not rely on a public GitHub Pages demo for dais use.
 - A live audio/video source with permission and a stable URL, such as MBTV, YouTube, Zoom, or room audio.
+- YouTube cookie auth for server-side YouTube resolution if Railway is challenged by YouTube bot protection.
 - Storage for raw PDFs, video files, and full transcripts. Use the RAID/NAS or cloud object storage; do not put raw archives in Git.
 - Optional but recommended: a domain such as `dais.yourdomain.com`.
 - Recommended for serious archive search: Postgres with `pgvector`, Supabase, Pinecone, Weaviate, or OpenAI vector stores.
@@ -53,12 +54,13 @@ Full raw archive storage is a different project. Downloading every PDF, packet, 
 
 1. Deploy the Node backend behind HTTPS with `ACCESS_TOKEN` enabled.
 2. Point `CMB_DEFAULT_LIVE_URL` at the official live feed.
-3. Add `OPENAI_API_KEY` and use the dashboard **Start Live** button. The Railway Docker image includes `ffmpeg` and `yt-dlp`; the server cuts audio into short chunks, transcribes them, then posts final transcript lines to:
+3. Add `OPENAI_API_KEY`. For YouTube sources, also add `YTDLP_COOKIES_BASE64` if YouTube challenges Railway with bot protection. The cookie value should be a base64-encoded Netscape-format `cookies.txt` file.
+4. Use the dashboard **Start Live** button. The Railway Docker image includes `ffmpeg` and `yt-dlp`; the server cuts audio into short chunks, transcribes them, then posts final transcript lines to:
 
 ```text
 POST /api/sessions/:sessionId/transcript
 ```
 
-4. Add retrieval over the official archive index and full extracted text.
-5. Require every recommendation to show source cards and confidence.
-6. Test on the actual dais device before the meeting.
+5. Add retrieval over the official archive index and full extracted text.
+6. Require every recommendation to show source cards and confidence.
+7. Test on the actual dais device before the meeting.

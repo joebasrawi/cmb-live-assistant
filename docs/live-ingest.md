@@ -48,3 +48,14 @@ The Responses API can then generate source-backed notes using file search, vecto
 - yt-dlp or a YouTube Data API path: needed to resolve the active live audio stream.
 - OpenAI API key: needed for realtime transcription and note generation.
 - Production auth: needed before sharing with commissioners.
+
+## YouTube Cookie Auth
+
+Railway and other server hosts can be challenged by YouTube with "Sign in to confirm you're not a bot." When that happens, `yt-dlp` cannot resolve the meeting audio even though `yt-dlp` is installed.
+
+The app supports two env vars for this:
+
+- `YTDLP_COOKIES_BASE64`: base64 of a Netscape-format YouTube `cookies.txt` file.
+- `YTDLP_COOKIES_PATH`: path to a Netscape-format cookie file already present on the server.
+
+Prefer `YTDLP_COOKIES_BASE64` on Railway. Do not commit cookies to Git.

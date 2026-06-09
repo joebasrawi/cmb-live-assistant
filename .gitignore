@@ -3,6 +3,7 @@ node_modules/
 data/logs/
 data/sessions/
 data/tmp/
+data/runtime/
 data/archive/raw/
 data/archive/downloads/
 data/archive/*.jsonl

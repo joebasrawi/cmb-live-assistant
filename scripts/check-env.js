@@ -12,6 +12,11 @@ function checkCommand(name, args = ["--version"]) {
 
 const checks = [
   { name: "OPENAI_API_KEY", ok: hasUsableOpenAiKey(), output: hasUsableOpenAiKey() ? "set" : "missing or invalid-looking" },
+  {
+    name: "YTDLP_COOKIES",
+    ok: Boolean(process.env.YTDLP_COOKIES_BASE64 || process.env.YOUTUBE_COOKIES_BASE64 || process.env.YTDLP_COOKIES_PATH || process.env.YOUTUBE_COOKIES_PATH),
+    output: "recommended for YouTube sources"
+  },
   checkCommand("ffmpeg", ["-version"]),
   checkCommand("yt-dlp", ["--version"])
 ];
@@ -24,4 +29,8 @@ for (const item of checks) {
 
 if (!process.env.OPENAI_API_KEY) {
   console.log("\nOPENAI_API_KEY is required for Start Live / live transcription.");
+}
+
+if (!process.env.YTDLP_COOKIES_BASE64 && !process.env.YOUTUBE_COOKIES_BASE64 && !process.env.YTDLP_COOKIES_PATH && !process.env.YOUTUBE_COOKIES_PATH) {
+  console.log("YouTube may block server-side stream resolution without YTDLP_COOKIES_BASE64 or YTDLP_COOKIES_PATH.");
 }

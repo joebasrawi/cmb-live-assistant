@@ -103,10 +103,12 @@ async function handleApi(request, response, url) {
 
   if (request.method === "GET" && url.pathname === "/api/preflight") {
     const live = liveTranscription.readiness();
+    const sourceNeedsYoutubeCookies = /youtube\.com|youtu\.be/i.test(defaultSession.sourceUrl || process.env.CMB_DEFAULT_LIVE_URL || "");
+    const youtubeAuthReady = !sourceNeedsYoutubeCookies || live.youtubeCookiesConfigured;
     const currentAgenda = memoryStore.currentAgendaRecords({ limit: 8 });
     const upcomingMeetings = memoryStore.listUpcomingMeetings({ limit: 20, meetingType: "all" });
     return sendJson(response, 200, {
-      ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && memoryStore.countRecords()),
+      ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && youtubeAuthReady && memoryStore.countRecords()),
       checkedAt: new Date().toISOString(),
       user,
       live,
@@ -120,6 +122,7 @@ async function handleApi(request, response, url) {
         { id: "openai", label: "OpenAI", ok: live.openAiConfigured },
         { id: "ffmpeg", label: "Audio processing", ok: live.ffmpegAvailable },
         { id: "ytdlp", label: "Live stream resolver", ok: live.ytDlpAvailable },
+        { id: "youtube-auth", label: "YouTube auth cookies", ok: youtubeAuthReady },
         { id: "memory", label: "Official record memory", ok: memoryStore.countRecords() > 10000 },
         { id: "agenda", label: "Current agenda preload", ok: currentAgenda.length > 0 }
       ]

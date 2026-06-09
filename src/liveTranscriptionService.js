@@ -6,6 +6,8 @@ import { hasUsableOpenAiKey, openAiApiKey } from "./openaiConfig.js";
 const DEFAULT_CHUNK_SECONDS = Number(process.env.TRANSCRIPT_CHUNK_SECONDS || 18);
 const OPENAI_TRANSCRIBE_MODEL = process.env.OPENAI_TRANSCRIBE_MODEL || "gpt-4o-mini-transcribe";
 const CMB_YOUTUBE_LIVE_URL = "https://www.youtube.com/cityofmiamibeach";
+const YTDLP_COOKIES_BASE64 = process.env.YTDLP_COOKIES_BASE64 || process.env.YOUTUBE_COOKIES_BASE64;
+const YTDLP_COOKIES_PATH = process.env.YTDLP_COOKIES_PATH || process.env.YOUTUBE_COOKIES_PATH;
 
 function setupError(message) {
   const error = new Error(message);
@@ -61,6 +63,7 @@ export class LiveTranscriptionService {
       openAiConfigured: hasUsableOpenAiKey(),
       ffmpegAvailable: commandAvailable("ffmpeg", ["-version"]),
       ytDlpAvailable: commandAvailable("yt-dlp", ["--version"]),
+      youtubeCookiesConfigured: Boolean(YTDLP_COOKIES_PATH || YTDLP_COOKIES_BASE64),
       model: OPENAI_TRANSCRIBE_MODEL,
       chunkSeconds: DEFAULT_CHUNK_SECONDS
     };
@@ -147,7 +150,16 @@ export class LiveTranscriptionService {
       return sourceUrl;
     }
 
-    const ytDlpArgs = ["-f", "ba/b", "--js-runtimes", "node", "-g", sourceUrl];
+    const ytDlpArgs = [
+      "--force-ipv4",
+      "-f",
+      "ba/b",
+      "--js-runtimes",
+      "node",
+      ...await this.ytDlpCookieArgs(),
+      "-g",
+      sourceUrl
+    ];
     const result = spawnSync("yt-dlp", ytDlpArgs, {
       encoding: "utf8",
       timeout: 30000,
@@ -161,6 +173,16 @@ export class LiveTranscriptionService {
     const mediaUrl = result.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)[0];
     if (!mediaUrl) throw new Error("yt-dlp did not return a media URL.");
     return mediaUrl;
+  }
+
+  async ytDlpCookieArgs() {
+    if (YTDLP_COOKIES_PATH) return ["--cookies", YTDLP_COOKIES_PATH];
+    if (!YTDLP_COOKIES_BASE64) return [];
+
+    const cookiesPath = path.join(this.rootDir, "data", "runtime", "youtube-cookies.txt");
+    await fs.mkdir(path.dirname(cookiesPath), { recursive: true });
+    await fs.writeFile(cookiesPath, Buffer.from(YTDLP_COOKIES_BASE64, "base64"));
+    return ["--cookies", cookiesPath];
   }
 
   spawnFfmpeg(job, mediaUrl) {
