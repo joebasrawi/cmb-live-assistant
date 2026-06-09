@@ -108,7 +108,7 @@ async function handleApi(request, response, url) {
     const currentAgenda = memoryStore.currentAgendaRecords({ limit: 8 });
     const upcomingMeetings = memoryStore.listUpcomingMeetings({ limit: 20, meetingType: "all" });
     return sendJson(response, 200, {
-      ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && youtubeAuthReady && memoryStore.countRecords()),
+      ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && memoryStore.countRecords()),
       checkedAt: new Date().toISOString(),
       user,
       live,
@@ -122,7 +122,7 @@ async function handleApi(request, response, url) {
         { id: "openai", label: "OpenAI", ok: live.openAiConfigured },
         { id: "ffmpeg", label: "Audio processing", ok: live.ffmpegAvailable },
         { id: "ytdlp", label: "Live stream resolver", ok: live.ytDlpAvailable },
-        { id: "youtube-auth", label: "YouTube auth cookies", ok: youtubeAuthReady },
+        { id: "youtube-auth", label: "YouTube auth cookie fallback", ok: youtubeAuthReady, optional: true },
         { id: "memory", label: "Official record memory", ok: memoryStore.countRecords() > 10000 },
         { id: "agenda", label: "Current agenda preload", ok: currentAgenda.length > 0 }
       ]

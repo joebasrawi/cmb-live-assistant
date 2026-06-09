@@ -976,16 +976,18 @@ async function submitAccessToken() {
 async function runPreflight() {
   try {
     const payload = await api("/api/preflight");
-    const failed = payload.checks.filter((check) => !check.ok);
+    const failed = payload.checks.filter((check) => !check.ok && !check.optional);
+    const optionalMissing = payload.checks.filter((check) => !check.ok && check.optional);
     const passed = payload.checks.length - failed.length;
     const agendaLine = payload.currentAgenda.length
       ? `${payload.currentAgenda.length} current agenda/source record${payload.currentAgenda.length === 1 ? "" : "s"} preloaded.`
       : "No upcoming commission agenda record is preloaded yet.";
+    const optionalLine = optionalMissing.length ? ` Optional fallback not set: ${optionalMissing.map((check) => check.label).join(", ")}.` : "";
     state.notes.push({
       id: crypto.randomUUID(),
       at: payload.checkedAt,
       title: failed.length ? "Preflight needs attention" : "Preflight ready",
-      body: `${passed}/${payload.checks.length} checks passed. ${agendaLine}${failed.length ? ` Needs: ${failed.map((check) => check.label).join(", ")}.` : ""}`,
+      body: `${passed}/${payload.checks.length} checks passed. ${agendaLine}${failed.length ? ` Needs: ${failed.map((check) => check.label).join(", ")}.` : ""}${optionalLine}`,
       confidence: failed.length ? "needs-review" : "source-assisted",
       sources: payload.currentAgenda
     });
