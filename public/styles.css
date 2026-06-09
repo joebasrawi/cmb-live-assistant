@@ -954,7 +954,7 @@ a {
 
 .control-grid {
   display: grid;
-  grid-template-columns: minmax(160px, 220px) minmax(240px, 1fr) minmax(270px, auto) minmax(260px, 360px);
+  grid-template-columns: minmax(150px, 190px) minmax(230px, 1fr) minmax(240px, 1.2fr) minmax(270px, auto) minmax(240px, 340px);
   gap: 10px;
   align-items: end;
 }

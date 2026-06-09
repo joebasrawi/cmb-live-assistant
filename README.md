@@ -19,6 +19,7 @@ It is designed to watch a live meeting transcript, detect references like agenda
 - Preflight checks for model config, stream tools, indexed memory, and current agenda preload.
 - Aide Review queue for draft catches before they reach the commissioner.
 - Meeting Prep with current agenda sources, risk flags, and "What should I ask?" questions.
+- Upcoming meeting selector covering Commission, committee, board, and land-use meetings indexed from PrimeGov.
 - Dark-mode public dashboard for GitHub Pages.
 - Static public archive search over a generated 2020-forward official metadata index.
 
@@ -74,6 +75,8 @@ AIDE2_NAME=
 ```
 
 Commissioner accounts open into a minimal dais view: Ask the Staffer, meeting prep, and aide-reviewed important cards. Aide accounts open the fuller operations view with preflight, draft alert review, source notes, transcript, and the ability to send reviewed cards to the commissioner.
+
+Use the Meeting dropdown in the aide/full view to target a committee, board, land-use, or Commission meeting before running prep or asking item-specific questions.
 
 ## Environment Check
 

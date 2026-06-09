@@ -104,6 +104,7 @@ async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/preflight") {
     const live = liveTranscription.readiness();
     const currentAgenda = memoryStore.currentAgendaRecords({ limit: 8 });
+    const upcomingMeetings = memoryStore.listUpcomingMeetings({ limit: 20, meetingType: "all" });
     return sendJson(response, 200, {
       ok: Boolean(live.openAiConfigured && live.ffmpegAvailable && live.ytDlpAvailable && memoryStore.countRecords()),
       checkedAt: new Date().toISOString(),
@@ -114,6 +115,7 @@ async function handleApi(request, response, url) {
         documentCount: memoryStore.list({ limit: 100000 }).length
       },
       currentAgenda,
+      upcomingMeetings,
       checks: [
         { id: "openai", label: "OpenAI", ok: live.openAiConfigured },
         { id: "ffmpeg", label: "Audio processing", ok: live.ffmpegAvailable },
@@ -125,12 +127,21 @@ async function handleApi(request, response, url) {
   }
 
   if (request.method === "GET" && url.pathname === "/api/current-agenda") {
-    return sendJson(response, 200, { records: memoryStore.currentAgendaRecords({ limit: 20 }) });
+    const meetingId = url.searchParams.get("meetingId") || undefined;
+    const meetingType = url.searchParams.get("meetingType") || "commission";
+    return sendJson(response, 200, { records: memoryStore.currentAgendaRecords({ limit: 20, meetingId, meetingType }) });
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/meetings") {
+    const meetingType = url.searchParams.get("meetingType") || "all";
+    return sendJson(response, 200, { meetings: memoryStore.listUpcomingMeetings({ limit: 60, meetingType }) });
   }
 
   if (request.method === "GET" && url.pathname === "/api/prep") {
     const q = url.searchParams.get("q") || "";
-    return sendJson(response, 200, { prep: buildMeetingPrep({ memoryStore, query: q }) });
+    const meetingId = url.searchParams.get("meetingId") || undefined;
+    const meetingType = url.searchParams.get("meetingType") || "commission";
+    return sendJson(response, 200, { prep: buildMeetingPrep({ memoryStore, query: q, meetingId, meetingType }) });
   }
 
   if (request.method === "GET" && url.pathname === "/api/memory") {
@@ -158,7 +169,12 @@ async function handleApi(request, response, url) {
 
   if (request.method === "POST" && url.pathname === "/api/ask") {
     const body = await readJson(request);
-    const answer = await answerQuestion({ memoryStore, question: body.question });
+    const answer = await answerQuestion({
+      memoryStore,
+      question: body.question,
+      meetingId: body.meetingId,
+      meetingType: body.meetingType || "commission"
+    });
     return sendJson(response, 200, { answer });
   }
 

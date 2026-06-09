@@ -154,7 +154,7 @@ async function askOpenAI({ question, mode, recommendation, evidence }) {
   return text || null;
 }
 
-export async function answerQuestion({ memoryStore, question }) {
+export async function answerQuestion({ memoryStore, question, meetingId, meetingType = "commission" }) {
   const query = String(question || "").trim();
   const people = detectPeople(query);
   const person = people[0] || "";
@@ -238,7 +238,7 @@ export async function answerQuestion({ memoryStore, question }) {
   };
 
   if (asksVotePrep || /what should (?:i|we|the commissioner) ask/i.test(query)) {
-    answerPayload.prep = buildMeetingPrep({ memoryStore, query });
+    answerPayload.prep = buildMeetingPrep({ memoryStore, query, meetingId, meetingType });
     answerPayload.suggestedQuestions = answerPayload.prep.questions;
   }
 

@@ -9,7 +9,10 @@ function loadStoredUser() {
 
 const state = {
   sessions: [],
+  meetings: [],
   currentSessionId: null,
+  currentMeetingId: sessionStorage.getItem("cmb-current-meeting-id") || "",
+  currentMeetingType: sessionStorage.getItem("cmb-current-meeting-type") || "commission",
   eventSource: null,
   transcript: [],
   alerts: [],
@@ -308,6 +311,7 @@ const elements = {
   accountPill: document.querySelector("#accountPill"),
   refreshBtn: document.querySelector("#refreshBtn"),
   sessionSelect: document.querySelector("#sessionSelect"),
+  meetingSelect: document.querySelector("#meetingSelect"),
   liveSourceInput: document.querySelector("#liveSourceInput"),
   startLiveBtn: document.querySelector("#startLiveBtn"),
   preflightBtn: document.querySelector("#preflightBtn"),
@@ -446,6 +450,27 @@ function renderSessions(defaultSessionId) {
   }
   state.currentSessionId = state.currentSessionId || defaultSessionId || state.sessions[0]?.id;
   elements.sessionSelect.value = state.currentSessionId;
+}
+
+function renderMeetings() {
+  if (!elements.meetingSelect) return;
+  elements.meetingSelect.innerHTML = "";
+  for (const meeting of state.meetings) {
+    const option = document.createElement("option");
+    option.value = meeting.id;
+    option.dataset.meetingType = meeting.meetingType || "commission";
+    option.textContent = `${formatMeetingDate(meeting.meetingDate)} - ${meeting.title}`;
+    elements.meetingSelect.append(option);
+  }
+
+  const preferred = state.meetings.find((meeting) => String(meeting.id) === String(state.currentMeetingId))
+    || state.meetings.find((meeting) => meeting.meetingType === "commission")
+    || state.meetings[0];
+  state.currentMeetingId = preferred?.id || "";
+  state.currentMeetingType = preferred?.meetingType || "commission";
+  if (state.currentMeetingId) elements.meetingSelect.value = state.currentMeetingId;
+  sessionStorage.setItem("cmb-current-meeting-id", state.currentMeetingId);
+  sessionStorage.setItem("cmb-current-meeting-type", state.currentMeetingType);
 }
 
 function renderSnapshot(session) {
@@ -657,7 +682,11 @@ function renderPrep(prep) {
 
 async function loadPrep(query = "") {
   try {
-    const suffix = query ? `?q=${encodeURIComponent(query)}` : "";
+    const params = new URLSearchParams();
+    if (query) params.set("q", query);
+    if (state.currentMeetingId) params.set("meetingId", state.currentMeetingId);
+    if (state.currentMeetingType) params.set("meetingType", state.currentMeetingType);
+    const suffix = params.toString() ? `?${params.toString()}` : "";
     const payload = state.staticMode
       ? { prep: buildStaticPrep(query) }
       : await api(`/api/prep${suffix}`);
@@ -844,12 +873,14 @@ function connectEvents() {
 
 async function loadSessions() {
   try {
-    const [sessionsPayload, recordsPayload] = await Promise.all([
+    const [sessionsPayload, recordsPayload, meetingsPayload] = await Promise.all([
       api("/api/sessions"),
-      api("/api/records")
+      api("/api/records"),
+      api("/api/meetings?meetingType=all")
     ]);
     state.staticMode = false;
     state.sessions = sessionsPayload.sessions;
+    state.meetings = meetingsPayload.meetings || [];
     indexSources(recordsPayload.records);
     const recordCount = recordsPayload.totalRecordCount || recordsPayload.records.length;
     state.totalRecordCount = recordCount;
@@ -857,6 +888,7 @@ async function loadSessions() {
     elements.dashboardMemoryMetric.textContent = recordCount;
     updateNextMeetingLine(recordsPayload.records);
     renderSessions(sessionsPayload.defaultSessionId);
+    renderMeetings();
     hideAuthGate();
     connectEvents();
   } catch (error) {
@@ -1216,7 +1248,11 @@ async function askStaffer() {
     try {
       const payload = await api("/api/ask", {
         method: "POST",
-        body: JSON.stringify({ question: questionWithFile })
+        body: JSON.stringify({
+          question: questionWithFile,
+          meetingId: state.currentMeetingId,
+          meetingType: state.currentMeetingType
+        })
       });
       answer = payload.answer;
     } catch {
@@ -1617,6 +1653,14 @@ elements.daisModeBtn.addEventListener("click", () => setDaisMode(!state.daisMode
 elements.sessionSelect.addEventListener("change", () => {
   state.currentSessionId = elements.sessionSelect.value;
   connectEvents();
+});
+elements.meetingSelect.addEventListener("change", () => {
+  const option = elements.meetingSelect.selectedOptions[0];
+  state.currentMeetingId = elements.meetingSelect.value;
+  state.currentMeetingType = option?.dataset.meetingType || "commission";
+  sessionStorage.setItem("cmb-current-meeting-id", state.currentMeetingId);
+  sessionStorage.setItem("cmb-current-meeting-type", state.currentMeetingType);
+  loadPrep(elements.askText.value.trim());
 });
 elements.closeSourceBtn.addEventListener("click", closeSourceModal);
 elements.accessTokenBtn.addEventListener("click", submitAccessToken);

@@ -179,6 +179,49 @@ function isCommissionRecord(record) {
   return haystack.includes("commission meeting") || haystack.includes("city commission") || haystack.includes("presentations and awards");
 }
 
+function meetingTypeMatches(record, meetingType = "commission") {
+  if (meetingType === "all") return true;
+  const isCommission = isCommissionRecord(record) || Number(record.committeeId) === 2;
+  if (meetingType === "committee") return !isCommission;
+  return isCommission;
+}
+
+function isPrimeGovMeeting(record) {
+  return String(record.recordType || "").startsWith("primegov-") && String(record.recordType || "").endsWith("-meeting");
+}
+
+function isUpcomingMeeting(record) {
+  return record.recordType === "primegov-upcoming-meeting";
+}
+
+function sameMeeting(record, meeting) {
+  if (!meeting) return false;
+  const meetingId = String(meeting.externalId || "").trim();
+  const recordId = String(record.id || "");
+  return Boolean(
+    (meetingId && (String(record.externalId || "") === meetingId || recordId.startsWith(`primegov-document-${meetingId}-`) || recordId === `primegov-meeting-${meetingId}`)) ||
+    (
+      record.meetingDate === meeting.meetingDate &&
+      String(record.meetingTitle || "").toLowerCase() === String(meeting.meetingTitle || "").toLowerCase() &&
+      String(record.committeeId || "") === String(meeting.committeeId || "")
+    )
+  );
+}
+
+function compactMeeting(record) {
+  return {
+    id: String(record.externalId || record.id),
+    recordId: record.id,
+    title: record.meetingTitle || record.title,
+    meetingDate: record.meetingDate,
+    claim: record.claim,
+    sourceUrl: record.sourceUrl,
+    committeeId: record.committeeId,
+    meetingTypeId: record.meetingTypeId,
+    meetingType: meetingTypeMatches(record, "commission") ? "commission" : "committee"
+  };
+}
+
 export class MemoryStore {
   constructor({ rootDir }) {
     this.rootDir = rootDir;
@@ -211,25 +254,40 @@ export class MemoryStore {
     return this.records.length;
   }
 
-  currentAgendaRecords({ limit = 12 } = {}) {
+  upcomingMeetings({ limit = 40, meetingType = "all" } = {}) {
     const today = todayIso();
-    const future = this.records
-      .filter((record) => record.meetingDate && record.meetingDate >= today && isCommissionRecord(record))
+    return this.records
+      .filter((record) => isUpcomingMeeting(record) && record.meetingDate && record.meetingDate >= today && meetingTypeMatches(record, meetingType))
       .sort((a, b) => String(a.meetingDate || "").localeCompare(String(b.meetingDate || "")));
+  }
 
-    const selectedDate = future[0]?.meetingDate;
-    if (!selectedDate) return [];
+  currentAgendaRecords({ limit = 12, meetingId, meetingType = "commission" } = {}) {
+    const future = this.upcomingMeetings({ limit: 100, meetingType });
+
+    const selectedMeeting = meetingId
+      ? future.find((record) => String(record.externalId || record.id) === String(meetingId) || String(record.id) === String(meetingId))
+      : future[0];
+
+    if (!selectedMeeting) return [];
 
     return this.records
-      .filter((record) => record.meetingDate === selectedDate && isCommissionRecord(record))
+      .filter((record) => sameMeeting(record, selectedMeeting))
       .sort((a, b) => {
         const titleA = String(a.title || "");
         const titleB = String(b.title || "");
+        if (isPrimeGovMeeting(a) && !isPrimeGovMeeting(b)) return -1;
+        if (!isPrimeGovMeeting(a) && isPrimeGovMeeting(b)) return 1;
         if (/agenda/i.test(titleA) && !/agenda/i.test(titleB)) return -1;
         if (!/agenda/i.test(titleA) && /agenda/i.test(titleB)) return 1;
         return titleA.localeCompare(titleB);
       })
       .slice(0, limit);
+  }
+
+  listUpcomingMeetings({ limit = 40, meetingType = "all" } = {}) {
+    return this.upcomingMeetings({ limit, meetingType })
+      .slice(0, limit)
+      .map(compactMeeting);
   }
 
   search(query, { limit = 5 } = {}) {

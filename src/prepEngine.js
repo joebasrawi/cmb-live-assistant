@@ -37,7 +37,10 @@ function compactRecord(record) {
     evidence: record.evidence,
     sourceUrl: record.sourceUrl,
     timestamp: record.timestamp,
-    sourceId: record.sourceId
+    sourceId: record.sourceId,
+    externalId: record.externalId,
+    committeeId: record.committeeId,
+    meetingTypeId: record.meetingTypeId
   };
 }
 
@@ -94,8 +97,8 @@ function titleFor(records, query) {
   return current?.meetingTitle || current?.title || query || "Current meeting prep";
 }
 
-export function buildMeetingPrep({ memoryStore, query = "" }) {
-  const currentAgenda = memoryStore.currentAgendaRecords({ limit: 20 });
+export function buildMeetingPrep({ memoryStore, query = "", meetingId, meetingType = "commission" }) {
+  const currentAgenda = memoryStore.currentAgendaRecords({ limit: 20, meetingId, meetingType });
   const queryRecords = query
     ? memoryStore.searchRecords(query, { limit: 10 })
     : [];
@@ -113,6 +116,8 @@ export function buildMeetingPrep({ memoryStore, query = "" }) {
     id: `prep-${Date.now()}`,
     at: new Date().toISOString(),
     title: titleFor(records, query),
+    meetingId: meetingId || records[0]?.externalId,
+    meetingType,
     summary: records.length
       ? `${records.length} current or related source record${records.length === 1 ? "" : "s"} are ready. Key checks: ${activeFlags.length ? activeFlags.join(", ") : "scope, source, timeline"}.`
       : "No current agenda records are loaded yet. Use the official PrimeGov agenda as the first source.",
